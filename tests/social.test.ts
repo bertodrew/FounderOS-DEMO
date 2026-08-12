@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
+import { FOUNDER_NAME } from '@/lib/identity';
 import { SocialAccountSchema, SocialSnapshotSchema, type SocialSnapshot } from '@/lib/schemas';
 import {
   allTimeGrowthPct,
@@ -211,7 +212,7 @@ describe('seeded social data', () => {
     const byPlatform = new Map(db.social.accounts().map((a) => [a.platform, a]));
     expect(byPlatform.get('instagram')?.handle).toBe('@founderos.ai');
     expect(byPlatform.get('twitter')?.handle).toBe('@Founderosai');
-    expect(byPlatform.get('linkedin')?.handle).toBe('Alex Rivera');
+    expect(byPlatform.get('linkedin')?.handle).toBe(FOUNDER_NAME);
   });
 
   test('seeds multi-month history ending at the seeded current value', () => {

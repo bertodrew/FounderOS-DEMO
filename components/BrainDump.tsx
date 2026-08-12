@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, BrainCircuit, Upload } from 'lucide-react';
-import { VENTURES } from '@/lib/ventures';
+import type { Venture } from '@/lib/ventures';
 
 const FOLDERS = ['inbox', 'ideas', 'people', 'companies', 'meetings', 'projects', 'writing'];
 
@@ -36,7 +36,7 @@ function getRecognizer(): SpeechRecognitionLike | null {
 const TEXTY = /\.(md|markdown|txt|csv|json|ya?ml|html?|log)$/i;
 const MAX_DOC_BYTES = 1_000_000; // embedding a monster helps nobody
 
-export function BrainDump({ compact = false }: { compact?: boolean }) {
+export function BrainDump({ compact = false, ventures = [] }: { compact?: boolean; ventures?: Venture[] }) {
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
   const [folder, setFolder] = useState('inbox');
@@ -295,7 +295,7 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] uppercase tracking-widest text-os-dim">tag venture</span>
-          {VENTURES.map((v) => {
+          {ventures.map((v) => {
             const on = tags.includes(v.brainTag);
             return (
               <button

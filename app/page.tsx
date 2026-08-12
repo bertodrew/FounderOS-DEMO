@@ -11,6 +11,7 @@ import type { SocialPlatform } from '@/lib/schemas';
 import { gatherCommsFeed } from '@/lib/comms-feed';
 import { inboundLast24h } from '@/lib/comms';
 import { groupRoadmapByQuarter } from '@/lib/roadmap';
+import { FOUNDER_NAME } from '@/lib/identity';
 import { PageHeader } from '@/components/PageHeader';
 import { HomeSocialGraph } from '@/components/HomeSocialGraph';
 import { Badge, Dot, Kbd, Label, SectionHead, Spark } from '@/components/terminal';
@@ -192,7 +193,7 @@ export default async function HomePage() {
 
       <PageHeader
         eyebrow="operator console"
-        title={`${greeting()}, Alex`}
+        title={`${greeting()}, ${FOUNDER_NAME}`}
         caret
         right={<Kbd>⌘K</Kbd>}
       />

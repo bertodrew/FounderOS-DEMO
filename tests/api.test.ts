@@ -184,10 +184,16 @@ describe('API route handlers', () => {
     expect(body.journeys.every((j: { venture: string }) => j.venture === 'vantage')).toBe(true);
   });
 
-  test('GET /api/funnel rejects an unknown venture', async () => {
+  test('GET /api/funnel rejects an empty venture but accepts any profile id (free-form now)', async () => {
     const { GET } = await import('@/app/api/funnel/route');
+    const empty = await GET(new Request('http://localhost/api/funnel?venture='));
+    expect(empty.status).toBe(400);
+    // profiles are user-created, so a venture with no matching journeys is
+    // simply an empty result, not an error.
     const res = await GET(new Request('http://localhost/api/funnel?venture=bogus'));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.journeys).toEqual([]);
   });
 
   test('GET /api/social exposes audience + DM growth across ranges', async () => {
