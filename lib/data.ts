@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
 
@@ -12,7 +13,12 @@ let instance: FounderDb | null = null;
 
 export function getDb(): FounderDb {
   if (instance) return instance;
-  const dbPath = process.env.FOUNDER_OS_DB ?? path.join(process.cwd(), 'data', 'founder-os.db');
+  // Vercel's deployment bundle (process.cwd()) is read-only at runtime; only
+  // /tmp is writable there. VERCEL is set on every Vercel deployment.
+  const defaultDbPath = process.env.VERCEL
+    ? path.join(os.tmpdir(), 'founder-os.db')
+    : path.join(process.cwd(), 'data', 'founder-os.db');
+  const dbPath = process.env.FOUNDER_OS_DB ?? defaultDbPath;
   if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   instance = openDb(dbPath);
   // Seed on first touch so a fresh clone boots looking alive. Each clause
