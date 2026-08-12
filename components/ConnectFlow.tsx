@@ -5,11 +5,26 @@
  * form (one field per env key), Save posts to /api/connections/connect (which
  * writes .env.local only), and the page refreshes into the connector's real
  * status — connected is never faked, a stored key on a connector-less tile
- * reads "key saved". Guidance-only tools (WhatsApp needs Full Disk Access,
- * IMAP inboxes, CalDAV) show their setup hint instead of a form.
+ * reads "key saved". Tools that categorically can't connect from a hosted
+ * deployment (WhatsApp's local chat db, an Obsidian vault on disk) or that
+ * auto-connect via another tile (Google Calendar via Gmail) show an honest
+ * label instead of a form.
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+/** Per-tile copy for guidance-only connectors (envKeys: []) — honest about
+ *  WHY there's no form, instead of one generic non-clickable "Setup" pill. */
+const LOCAL_ONLY_LABEL: Record<string, string> = {
+  whatsapp: 'Local Mac only',
+  obsidian: 'Local vault only',
+  googlecalendar: 'Auto via Gmail',
+};
+const LOCAL_ONLY_HINT: Record<string, string> = {
+  whatsapp: "Reads WhatsApp's local chat database on your Mac — can't connect from a hosted deployment.",
+  obsidian: "Reads a local Obsidian vault on disk — can't connect from a hosted deployment.",
+  googlecalendar: 'Uses the same Google app password as Gmail — set up Gmail above and Calendar connects automatically.',
+};
 
 export function ConnectFlow({
   slug,
@@ -151,10 +166,10 @@ export function ConnectFlow({
         </button>
       ) : (
         <span
-          title={guidance ?? 'Connects through local setup, not a pasted key'}
-          className="cursor-help rounded-full border border-os-border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-os-dim"
+          title={guidance ?? LOCAL_ONLY_HINT[slug] ?? 'Connects through local setup, not a pasted key'}
+          className="cursor-help font-mono text-[10px] uppercase tracking-[0.1em] text-os-dim/70"
         >
-          Setup
+          {LOCAL_ONLY_LABEL[slug] ?? 'Local setup only'}
         </span>
       )}
     </div>

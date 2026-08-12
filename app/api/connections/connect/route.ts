@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { INTEGRATIONS, connectKeysFor } from '@/lib/integrations-catalog';
 import { readEnvLocal, upsertEnvLocal, removeEnvLocal } from '@/lib/creds';
+import { testImapConnection } from '@/lib/connectors/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,17 @@ export async function POST(req: Request) {
   for (const v of Object.values(body.values)) {
     if (/[\r\n]/.test(v) || v.trim().length === 0) {
       return NextResponse.json({ ok: false, error: 'unsafe value' }, { status: 400 });
+    }
+  }
+
+  if (entry.connectorId === 'email') {
+    const test = await testImapConnection({
+      host: body.values.INBOX_1_HOST,
+      user: body.values.INBOX_1_USER,
+      pass: body.values.INBOX_1_PASS,
+    });
+    if (!test.ok) {
+      return NextResponse.json({ ok: false, error: `Could not connect: ${test.error}` }, { status: 400 });
     }
   }
 
