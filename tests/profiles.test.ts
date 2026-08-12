@@ -51,6 +51,38 @@ describe('profiles CRUD (/api/profiles)', () => {
     expect(res.status).toBe(400);
   });
 
+  test('PATCH updates an existing profile without touching its other fields', async () => {
+    const { POST, PATCH, GET } = await import('@/app/api/profiles/route');
+    await POST(new Request('http://test/api/profiles', { method: 'POST', body: JSON.stringify({ name: 'Legal Startup' }) }));
+    const res = await PATCH(
+      new Request('http://test/api/profiles', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: 'legal-startup', name: 'Legal Startup Co', kind: 'Legal tech' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.profile.name).toBe('Legal Startup Co');
+    expect(body.profile.kind).toBe('Legal tech');
+    expect(body.profile.id).toBe('legal-startup');
+
+    const list = await (await GET()).json();
+    const updated = list.profiles.find((p: { id: string }) => p.id === 'legal-startup');
+    expect(updated.name).toBe('Legal Startup Co');
+  });
+
+  test('PATCH 404s for an unknown profile id', async () => {
+    const { PATCH } = await import('@/app/api/profiles/route');
+    const res = await PATCH(
+      new Request('http://test/api/profiles', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: 'does-not-exist', name: 'X' }),
+      }),
+    );
+    expect(res.status).toBe(404);
+  });
+
   test('DELETE removes a profile permanently — it does not come back on re-seed', async () => {
     const { POST, DELETE, GET } = await import('@/app/api/profiles/route');
     await POST(new Request('http://test/api/profiles', { method: 'POST', body: JSON.stringify({ name: 'AeroCharter' }) }));

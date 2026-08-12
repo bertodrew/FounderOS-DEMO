@@ -53,6 +53,35 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, profile });
 }
 
+const PatchSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(80).optional(),
+  kind: z.string().max(80).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+  detail: z.string().max(280).optional(),
+});
+
+export async function PATCH(request: Request) {
+  const parsed = PatchSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  const db = getDb();
+  const existing = db.profiles.all().find((p) => p.id === parsed.data.id);
+  if (!existing) return NextResponse.json({ error: 'profile not found' }, { status: 404 });
+
+  const profile = {
+    ...existing,
+    name: parsed.data.name ?? existing.name,
+    kind: parsed.data.kind ?? existing.kind,
+    color: parsed.data.color ?? existing.color,
+    detail: parsed.data.detail ?? existing.detail,
+  };
+  db.profiles.insert(profile);
+  return NextResponse.json({ ok: true, profile });
+}
+
 const DeleteSchema = z.object({ id: z.string().min(1) });
 
 export async function DELETE(request: Request) {

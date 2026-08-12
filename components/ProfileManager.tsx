@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * Create/delete profiles inline next to the /org venture switcher. Profiles
- * are fully user-owned (lib/db.ts `profiles` table) — the two seeded
- * examples (Vantage, Launchpad Cohort) are ordinary deletable rows, not
- * hardcoded.
+ * Create/rename/delete profiles inline next to the /org venture switcher.
+ * Profiles are fully user-owned (lib/db.ts `profiles` table) — the two
+ * seeded examples (Vantage, Launchpad Cohort) are ordinary editable/deletable
+ * rows, not hardcoded.
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,24 +12,38 @@ import type { Venture } from '@/lib/ventures';
 
 export function ProfileManager({ ventures, activeId }: { ventures: Venture[]; activeId?: string }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const active = activeId ? ventures.find((v) => v.id === activeId) : undefined;
+  const [mode, setMode] = useState<'closed' | 'create' | 'edit'>('closed');
+  const open = mode !== 'closed';
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const create = async () => {
+  const startCreate = () => {
+    setName('');
+    setMode('create');
+  };
+
+  const startEdit = () => {
+    if (!active) return;
+    setName(active.name);
+    setMode('edit');
+  };
+
+  const save = async () => {
     if (!name.trim()) return;
     setBusy(true);
     setError(null);
     try {
+      const isEdit = mode === 'edit';
       const res = await fetch('/api/profiles', {
-        method: 'POST',
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify(isEdit ? { id: active!.id, name: name.trim() } : { name: name.trim() }),
       });
       const body = (await res.json()) as { ok?: boolean; error?: unknown };
-      if (!res.ok || !body.ok) throw new Error('could not create profile');
-      setOpen(false);
+      if (!res.ok || !body.ok) throw new Error(isEdit ? 'could not save changes' : 'could not create profile');
+      setMode('closed');
       setName('');
       router.refresh();
     } catch (e) {
@@ -61,22 +75,22 @@ export function ProfileManager({ ventures, activeId }: { ventures: Venture[]; ac
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void create()}
+          onKeyDown={(e) => e.key === 'Enter' && void save()}
           placeholder="Company name"
           className="w-40 rounded-md border border-os-border bg-os-surface2 px-2 py-1 font-mono text-[10.5px] text-os-text placeholder:text-os-dim focus:border-os-border-strong focus:outline-none"
         />
         <button
           type="button"
           disabled={busy || !name.trim()}
-          onClick={() => void create()}
+          onClick={() => void save()}
           className="rounded-lg border border-os-border-strong px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-os-text transition-colors hover:bg-os-text hover:text-os-bg disabled:opacity-40"
         >
-          {busy ? '…' : 'Add'}
+          {busy ? '…' : mode === 'edit' ? 'Save' : 'Add'}
         </button>
         <button
           type="button"
           onClick={() => {
-            setOpen(false);
+            setMode('closed');
             setError(null);
           }}
           className="text-[10px] uppercase tracking-[0.08em] text-os-dim hover:text-os-text"
@@ -92,11 +106,21 @@ export function ProfileManager({ ventures, activeId }: { ventures: Venture[]; ac
     <div className="flex items-center gap-1.5">
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={startCreate}
         className="rounded-lg border border-dashed border-os-border px-3 py-1.5 text-xs font-semibold text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text"
       >
         + New profile
       </button>
+      {active && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={startEdit}
+          className="text-[10px] uppercase tracking-[0.08em] text-os-dim transition-colors hover:text-os-text disabled:opacity-40"
+        >
+          Edit {active.name}
+        </button>
+      )}
       {activeId && (
         <button
           type="button"
