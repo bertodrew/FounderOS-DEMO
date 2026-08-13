@@ -72,6 +72,7 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'zernio', name: 'Zernio', tagline: 'Cross-platform posting', category: 'Marketing', connectorId: 'zernio', envKeys: ['ZERNIO_API_KEY'] },
   { slug: 'webinarjam', name: 'WebinarJam', tagline: 'Webinar registrants', category: 'Marketing', connectorId: 'webinarjam', envKeys: ['WEBINARJAM_API_KEY'] },
   { slug: 'trakyo', name: 'Trakyo', tagline: 'Organic attribution', category: 'Marketing', connectorId: 'trakyo', envKeys: ['TRAKYO_API_KEY'] },
+  { slug: 'riona', name: 'Riona AI', tagline: 'Instagram automation agent', category: 'Marketing', connectorId: 'riona', envKeys: ['RIONA_BASE_URL', 'RIONA_IG_USERNAME', 'RIONA_IG_PASSWORD'] },
 
   // Storage
   { slug: 'googledrive', name: 'Google Drive', tagline: 'Files & folders', category: 'Storage' },

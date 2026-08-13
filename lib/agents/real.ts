@@ -10,6 +10,7 @@ import { attioClients, attioStatus } from '@/lib/connectors/attio';
 import { webinarjamStatus, listRegistrants } from '@/lib/connectors/webinarjam';
 import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { arcadsStatus } from '@/lib/connectors/arcads';
+import { rionaStatus } from '@/lib/connectors/riona';
 import { whatsappStatus } from '@/lib/connectors/whatsapp';
 import { wisprStatus } from '@/lib/connectors/wispr';
 import { localStackStatus } from '@/lib/connectors/local-stack';
@@ -69,6 +70,11 @@ async function zernioRun(): Promise<AgentRunResult> {
 
 async function arcadsRun(): Promise<AgentRunResult> {
   const status = await arcadsStatus();
+  return { ok: status.state === 'connected', summary: status.detail, data: status.meta };
+}
+
+async function rionaRun(): Promise<AgentRunResult> {
+  const status = await rionaStatus();
   return { ok: status.state === 'connected', summary: status.detail, data: status.meta };
 }
 
@@ -152,22 +158,23 @@ export const realAgents: RuntimeAgent[] = [
   {
     id: 'social-agent',
     name: 'Social Agent',
-    description: 'Aggregates the Zernio publishing and Arcads ad-generation workers.',
+    description: 'Aggregates the Zernio publishing, Arcads ad-generation, and Riona Instagram workers.',
     departmentId: 'dept-marketing-growth',
     async run() {
-      const [zernio, arcads] = await Promise.all([zernioRun(), arcadsRun()]);
-      const live = [zernio, arcads].filter((r) => r.ok).length;
+      const [zernio, arcads, riona] = await Promise.all([zernioRun(), arcadsRun(), rionaRun()]);
+      const live = [zernio, arcads, riona].filter((r) => r.ok).length;
       const queued = getDb().socialPosts.queued().length;
       const queueNote = queued > 0 ? `${queued} post${queued === 1 ? '' : 's'} queued for publish` : 'no posts queued';
       return {
         ok: live > 0,
-        summary: `${live}/2 core content APIs live · Zernio ${label(zernio)} · Arcads ${label(arcads)} · ${queueNote}`,
-        data: { zernio, arcads, queuedPosts: queued },
+        summary: `${live}/3 core content APIs live · Zernio ${label(zernio)} · Arcads ${label(arcads)} · Riona ${label(riona)} · ${queueNote}`,
+        data: { zernio, arcads, riona, queuedPosts: queued },
       };
     },
   },
   { id: 'zernio-publisher', name: 'Zernio Publisher', description: 'Six platforms under @founderos.ai via Zernio.', departmentId: 'dept-marketing-growth', run: zernioRun },
   { id: 'arcads-creative', name: 'Arcads Creative', description: 'UGC ads for Vantage via the Arcads API.', departmentId: 'dept-marketing-growth', run: arcadsRun },
+  { id: 'riona-instagram', name: 'Riona Instagram', description: 'Instagram automation (likes, comments, DMs) via the companion Riona AI service.', departmentId: 'dept-marketing-growth', run: rionaRun },
   {
     id: 'remotion-editor',
     name: 'Remotion Editor',

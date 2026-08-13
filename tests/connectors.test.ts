@@ -5,6 +5,7 @@ import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
 import { githubStatus } from '@/lib/connectors/github';
 import { odooStatus } from '@/lib/connectors/odoo';
+import { rionaStatus, rionaLogin } from '@/lib/connectors/riona';
 
 describe('parseInboxConfigs', () => {
   test('returns empty when nothing is configured', () => {
@@ -161,6 +162,30 @@ describe('odooStatus', () => {
         })
       ).state,
     ).toBe('not_configured');
+  });
+});
+
+describe('rionaStatus', () => {
+  test('reports not_configured without RIONA_BASE_URL', async () => {
+    const status = await rionaStatus({});
+    expect(status.id).toBe('riona');
+    expect(status.kind).toBe('social');
+    expect(status.state).toBe('not_configured');
+    expect(status.detail).toMatch(/RIONA_BASE_URL/);
+  });
+});
+
+describe('rionaLogin', () => {
+  test('fails fast when IG credentials are missing, even with a base URL set', async () => {
+    const result = await rionaLogin({ RIONA_BASE_URL: 'https://example.com' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/RIONA_IG_USERNAME/);
+  });
+
+  test('fails without RIONA_BASE_URL regardless of credentials', async () => {
+    const result = await rionaLogin({ RIONA_IG_USERNAME: 'a', RIONA_IG_PASSWORD: 'b' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/RIONA_BASE_URL/);
   });
 });
 

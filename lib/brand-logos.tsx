@@ -61,6 +61,7 @@ const LETTERMARK: Record<string, string> = {
   manychat: '#0084FF',
   skool: '#E4573D',
   'proposal-gen': '#00764f',
+  riona: '#E1306C',
 };
 
 function siFor(slug: string): SiIcon | null {
