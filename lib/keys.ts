@@ -77,5 +77,6 @@ export function upsertEnvLocal(filePath: string, key: string, value: string): vo
   }
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${next.join('\n')}\n`, 'utf8');
+  // 0600: the file holds live API keys, so it must not be world-readable.
+  fs.writeFileSync(filePath, `${next.join('\n')}\n`, { encoding: 'utf8', mode: 0o600 });
 }
