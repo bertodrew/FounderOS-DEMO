@@ -125,6 +125,7 @@ export function SkillsGrid({ cards, sourceNote }: { cards: SkillCard[]; sourceNo
     setMd(null); // loading
     try {
       const res = await fetch(`/api/skills/${encodeURIComponent(card.id)}`);
+      if (!res.ok) throw new Error(`${res.status}`);
       const body = (await res.json()) as { markdown?: string; error?: string };
       setMd(body.markdown ?? `SKILL.md could not be read (${body.error ?? res.status}).`);
     } catch {

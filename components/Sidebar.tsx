@@ -40,7 +40,10 @@ export function Sidebar() {
   useEffect(() => {
     let cancelled = false;
     fetch('/api/connections')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then((body: { connections?: { state: string }[] }) => {
         if (cancelled || !Array.isArray(body.connections)) return;
         setLive({

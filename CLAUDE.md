@@ -87,6 +87,29 @@ fixed `Sidebar` (Operate/System groups) + sticky `Topbar` (breadcrumb + ⌘K) +
 `app/api/*` — note `GET /api/brain?q=` runs a hybrid search; bare `GET` returns
 provider status.
 
+## Production hardening (2026-08-21)
+
+The write surface is gated; reads stay open so the demo still works with no
+setup. Anything new that mutates state inherits this automatically — it goes
+through `middleware.ts`, so do not re-implement auth in a route.
+
+- `lib/auth.ts` — `checkAccess()`: reads always pass; writes require
+  `FOUNDER_OS_TOKEN`. **Fail-closed**: unset + `NODE_ENV=production` ⇒ writes
+  are disabled (503), never open. `/api/webhooks/*` and `/api/health` bypass it
+  (own secret / platform probe).
+- `lib/rate-limit.ts` — per-IP fixed window, tighter class for LLM + upload
+  routes. New expensive endpoint ⇒ add it to `RULES` in that file.
+- `middleware.ts` — the single choke point: security headers, gate, limiter.
+  Runs on the **edge runtime**, so everything it imports must stay edge-safe
+  (no node builtins, no better-sqlite3).
+- `lib/storage.ts` — `resolveDbPath()` / `describeStorage()`: the one place
+  that decides where the store lives and whether writes survive a restart.
+  `GET /api/health` reports `degraded` (not `ok`) on a non-durable store or an
+  ungated production deploy.
+- Deploy: `Dockerfile` (standalone output, non-root, `/data` volume) +
+  `railway.json`; CI in `.github/workflows/ci.yml` runs typecheck, tests,
+  build, and a secret scan.
+
 ## Conventions
 
 - TDD: failing test first, then implementation. Tests live in `tests/`,

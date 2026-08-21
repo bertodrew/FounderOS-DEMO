@@ -132,7 +132,10 @@ function StatPopout({
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/social/series?metric=${metric}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
       .then((body: { series: LabelledSeries[] }) => {
         if (!cancelled) setData(body.series ?? []);
       })

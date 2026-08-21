@@ -1,0 +1,16 @@
+node_modules
+.next
+.next-*
+.git
+.github
+data/*.db
+data/*.db-*
+tests
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+.DS_Store
+README.md
+CLAUDE.md
+AGENTS.md

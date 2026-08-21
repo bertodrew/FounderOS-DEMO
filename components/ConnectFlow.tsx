@@ -56,12 +56,18 @@ export function ConnectFlow({
     setBusy(true);
     setError(null);
     try {
-      await fetch('/api/connections/connect', {
+      const res = await fetch('/api/connections/connect', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'disconnect failed');
+      }
       router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'disconnect failed');
     } finally {
       setBusy(false);
     }

@@ -203,15 +203,74 @@ so they never touch the seeded dev DB.
 
 ---
 
-## Deploying to Railway
+## Going to production
 
-1. Create a Railway project and point it at this repo.
-2. Set the build command to `npm run build` and the start command to `npm start`
-   (the app serves on the `PORT` Railway provides).
-3. Add a database service and any connector credentials as environment variables
-   in the Railway dashboard.
-4. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
-   services and are referenced by URL from the app's environment.
+The demo is deliberately open: it has to be browsable with no setup. A public
+deployment is a different thing, and the app enforces the difference itself.
+
+### 1. Gate the write surface
+
+Reads stay open. **Writes** (agent runs, LLM chat, credential saves, uploads)
+require an operator token:
+
+```bash
+FOUNDER_OS_TOKEN=$(openssl rand -hex 32)
+```
+
+Callers present it as `Authorization: Bearer <token>`, an `x-founder-os-token`
+header, or a `founder_os_token` cookie. The gate **fails closed**: with
+`NODE_ENV=production` and no token set, every write endpoint answers `503`
+rather than staying open. Set `MANYCHAT_WEBHOOK_SECRET` too if you use the
+ManyChat webhook — in production it refuses to serve without one.
+
+Writes are also rate limited per IP, with a tighter budget for LLM calls and
+uploads. That limiter is **per process**: on a multi-instance deployment the
+effective limit multiplies by the instance count, so put a shared store or an
+edge WAF in front if you scale out.
+
+### 2. Give the store a real disk
+
+The SQLite store must live on a **mounted volume**. The default path lives
+inside the deployment, which most hosts wipe on redeploy, and a serverless
+host's `/tmp` is per-instance and erased on cold start — so agent runs, tasks,
+brain dumps, queued posts, and contact tags would silently disappear.
+
+```bash
+FOUNDER_OS_DB=/data/founder-os.db   # a mounted volume, not the bundle
+```
+
+`GET /api/health` reports this. It answers `degraded` — never `ok` — when the
+store is not durable or when writes are ungated, so a data-losing deploy is
+visible on the first probe instead of at the first lost record.
+
+### 3. Deploy
+
+**Docker / Railway** (recommended — a real disk and a long-lived process):
+
+```bash
+docker build -t founder-os .
+docker run -p 4100:4100 -v founder-os-data:/data   -e FOUNDER_OS_TOKEN=... founder-os
+```
+
+`railway.json` points Railway at the Dockerfile and health-checks
+`/api/health`. Add a volume mounted at `/data`, then set `FOUNDER_OS_TOKEN` and
+any connector credentials as environment variables in the dashboard.
+
+**Serverless (Vercel)** runs, but the filesystem is read-only apart from a
+per-instance `/tmp`: the Connections board cannot save pasted credentials
+(it returns a clear `501` pointing you at host env vars), and every write is
+lost on cold start. Point `FOUNDER_OS_DB` at a managed database — or use a
+container host — before treating it as more than a preview.
+
+Credentials go in the host's environment, never in the repo. The knowledge
+services (G-Brain and Optimal Engine) run as companion services and are
+referenced by URL from the app's environment.
+
+### 4. CI
+
+`.github/workflows/ci.yml` runs typecheck, the full vitest suite, and a
+production build on every pull request, plus a secret scan that fails the
+build if credential-shaped files or live key material are ever tracked.
 
 ---
 
