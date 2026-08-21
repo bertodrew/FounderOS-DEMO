@@ -21,6 +21,7 @@ import {
   BarChart3,
   LayoutGrid,
   Layers,
+  CheckSquare,
 } from 'lucide-react';
 
 export type NavItem = { href: string; label: string; icon: typeof Home };
@@ -47,6 +48,7 @@ export const NAV_AGENTS: NavItem[] = [
 export const NAV_INTELLIGENCE: NavItem[] = [{ href: '/brain', label: 'G-Brain', icon: Brain }];
 
 export const NAV_SYSTEM: NavItem[] = [
+  { href: '/onboarding', label: 'Onboarding', icon: CheckSquare },
   { href: '/integrations', label: 'Connections', icon: Plug },
   { href: '/roadmap', label: 'Roadmap', icon: Map },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },

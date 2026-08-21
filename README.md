@@ -266,7 +266,33 @@ Credentials go in the host's environment, never in the repo. The knowledge
 services (G-Brain and Optimal Engine) run as companion services and are
 referenced by URL from the app's environment.
 
-### 4. CI
+### 4. Secrets with Doppler
+
+Configuration lives in the Doppler project **`founder-dashboard`**; `doppler.yaml`
+binds this repo to it so `doppler setup` needs no prompts.
+
+```bash
+doppler setup                    # bind to founder-dashboard
+npm run doppler:sync             # show the plan, values masked, uploads nothing
+npm run doppler:sync -- --apply  # upload to the prd config
+doppler run -- npm start         # run with the secrets injected
+```
+
+`doppler:sync` derives the key list from the same connector catalog the
+Connections board uses, so a connector added there is covered without a second
+list to maintain. It generates the two secrets that are genuinely ours to
+generate (`FOUNDER_OS_TOKEN`, `MANYCHAT_WEBHOOK_SECRET`) and only when they are
+not already set, so re-running never rotates a live secret. It never invents a
+third-party credential: a missing Stripe key is reported as missing rather than
+filled with a placeholder that would look configured and fail on the first real
+call. Values reach Doppler through a `0600` temp file, never as command
+arguments, so they stay out of the process list and your shell history.
+
+On Railway, add the Doppler integration (or set `DOPPLER_TOKEN` as a service
+variable and wrap the start command in `doppler run --`) so the container gets
+its configuration without any secret living in the image.
+
+### 5. CI
 
 `.github/workflows/ci.yml` runs typecheck, the full vitest suite, and a
 production build on every pull request, plus a secret scan that fails the
