@@ -15,7 +15,7 @@ import {
 export const INTEGRATIONS: Integration[] = [
   // Communication
   { slug: 'slack', name: 'Slack', tagline: 'Channels & DMs', category: 'Communication', connectorId: 'slack', popular: true, envKeys: ['SLACK_BOT_TOKEN'] },
-  { slug: 'gmail', name: 'Gmail', tagline: 'Send & read email', category: 'Communication', connectorId: 'email', popular: true, envKeys: [] },
+  { slug: 'gmail', name: 'Gmail', tagline: 'Send & read email', category: 'Communication', connectorId: 'email', popular: true, envKeys: ['INBOX_1_HOST', 'INBOX_1_USER', 'INBOX_1_PASS', 'INBOX_1_NAME'] },
   { slug: 'whatsapp', name: 'WhatsApp', tagline: 'Messages & broadcasts', category: 'Communication', connectorId: 'whatsapp', envKeys: [] },
   { slug: 'discord', name: 'Discord', tagline: 'Servers & channels', category: 'Communication' },
   { slug: 'telegram', name: 'Telegram', tagline: 'Chats & bots', category: 'Communication' },
@@ -38,9 +38,10 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'zendesk', name: 'Zendesk', tagline: 'Tickets & support', category: 'CRM & Sales' },
   { slug: 'intercom', name: 'Intercom', tagline: 'Chat & lifecycle', category: 'CRM & Sales' },
   { slug: 'gohighlevel', name: 'GoHighLevel', tagline: 'LC pipeline & contacts', category: 'CRM & Sales', connectorId: 'ghl', envKeys: ['GHL_API_KEY', 'GHL_LOCATION_ID'] },
+  { slug: 'odoo', name: 'Odoo', tagline: 'CRM & ERP', category: 'CRM & Sales', connectorId: 'odoo', envKeys: ['ODOO_URL', 'ODOO_DB', 'ODOO_USERNAME', 'ODOO_API_KEY'] },
 
   // Developer
-  { slug: 'github', name: 'GitHub', tagline: 'Repos, issues & PRs', category: 'Developer', popular: true },
+  { slug: 'github', name: 'GitHub', tagline: 'Repos, issues & PRs', category: 'Developer', popular: true, connectorId: 'github', envKeys: ['GITHUB_TOKEN'] },
   { slug: 'linear', name: 'Linear', tagline: 'Issues & projects', category: 'Developer' },
   { slug: 'jira', name: 'Jira', tagline: 'Boards & tickets', category: 'Developer' },
   { slug: 'vercel', name: 'Vercel', tagline: 'Deploys & logs', category: 'Developer' },
@@ -71,6 +72,7 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'zernio', name: 'Zernio', tagline: 'Cross-platform posting', category: 'Marketing', connectorId: 'zernio', envKeys: ['ZERNIO_API_KEY'] },
   { slug: 'webinarjam', name: 'WebinarJam', tagline: 'Webinar registrants', category: 'Marketing', connectorId: 'webinarjam', envKeys: ['WEBINARJAM_API_KEY'] },
   { slug: 'trakyo', name: 'Trakyo', tagline: 'Organic attribution', category: 'Marketing', connectorId: 'trakyo', envKeys: ['TRAKYO_API_KEY'] },
+  { slug: 'riona', name: 'Riona AI', tagline: 'Instagram automation agent', category: 'Marketing', connectorId: 'riona', envKeys: ['RIONA_BASE_URL', 'RIONA_IG_USERNAME', 'RIONA_IG_PASSWORD'] },
 
   // Storage
   { slug: 'googledrive', name: 'Google Drive', tagline: 'Files & folders', category: 'Storage' },
@@ -81,7 +83,7 @@ export const INTEGRATIONS: Integration[] = [
 
   // AI & Automation
   { slug: 'openai', name: 'OpenAI', tagline: 'GPT models & embeddings', category: 'AI & Automation' },
-  { slug: 'anthropic', name: 'Anthropic', tagline: 'Claude models', category: 'AI & Automation', popular: true },
+  { slug: 'anthropic', name: 'Anthropic', tagline: 'Claude models via AI Gateway', category: 'AI & Automation', popular: true, connectorId: 'llm', envKeys: ['AI_GATEWAY_API_KEY'] },
   { slug: 'zapier', name: 'Zapier', tagline: 'Automate anything', category: 'AI & Automation' },
   { slug: 'make', name: 'Make', tagline: 'Visual workflows', category: 'AI & Automation' },
   { slug: 'n8n', name: 'n8n', tagline: 'Self-hosted automation', category: 'AI & Automation' },

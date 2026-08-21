@@ -12,7 +12,7 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 describe('/brain header capture + graph placement', () => {
   test('the compact dump rides the header right slot; no standalone dump section', () => {
     const page = read('app/brain/page.tsx');
-    expect(page).toMatch(/right=\{<BrainDump compact \/>\}/);
+    expect(page).toMatch(/right=\{<BrainDump compact ventures=\{[^}]+\} \/>\}/);
     expect(page).not.toMatch(/<section[^>]*>\s*<BrainDump \/>/);
   });
 

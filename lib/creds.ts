@@ -63,7 +63,11 @@ function readEnvFileSafe(filePath: string): Record<string, string> {
  * the path for tests. */
 
 export function envLocalPath(): string {
-  return process.env.FOUNDER_OS_ENV_LOCAL ?? path.join(process.cwd(), '.env.local');
+  if (process.env.FOUNDER_OS_ENV_LOCAL) return process.env.FOUNDER_OS_ENV_LOCAL;
+  // Vercel's deployment bundle (process.cwd()) is read-only at runtime; only
+  // /tmp is writable there. VERCEL is set on every Vercel deployment.
+  if (process.env.VERCEL) return path.join(os.tmpdir(), 'founder-os.env.local');
+  return path.join(process.cwd(), '.env.local');
 }
 
 export function readEnvLocal(): Record<string, string> {

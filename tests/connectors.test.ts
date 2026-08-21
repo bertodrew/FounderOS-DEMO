@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { imapClientOptions, parseInboxConfigs } from '@/lib/connectors/email';
+import { imapClientOptions, parseInboxConfigs, testImapConnection } from '@/lib/connectors/email';
 import { configuredProcessors } from '@/lib/connectors/payments';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
+import { githubStatus } from '@/lib/connectors/github';
+import { odooStatus } from '@/lib/connectors/odoo';
+import { rionaStatus, rionaLogin } from '@/lib/connectors/riona';
 
 describe('parseInboxConfigs', () => {
   test('returns empty when nothing is configured', () => {
@@ -106,6 +109,83 @@ describe('ghlStatus', () => {
     expect(status.state).toBe('connected');
     expect(status.id).toBe('ghl');
     expect(status.kind).toBe('crm');
+  });
+});
+
+describe('testImapConnection', () => {
+  test('resolves ok when the injected client connects', async () => {
+    const FakeImapFlow = vi.fn().mockImplementation(() => ({
+      connect: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn().mockResolvedValue(undefined),
+    }));
+    const result = await testImapConnection(
+      { host: 'imap.gmail.com', user: 'a@b.c', pass: 'good-pass' },
+      FakeImapFlow as never,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  test('reports the real error when the injected client rejects', async () => {
+    const FakeImapFlow = vi.fn().mockImplementation(() => ({
+      connect: vi.fn().mockRejectedValue(new Error('Invalid credentials (Failure)')),
+      logout: vi.fn().mockResolvedValue(undefined),
+    }));
+    const result = await testImapConnection(
+      { host: 'imap.gmail.com', user: 'a@b.c', pass: 'wrong-pass' },
+      FakeImapFlow as never,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Invalid credentials/);
+  });
+});
+
+describe('githubStatus', () => {
+  test('reports not_configured without a token', async () => {
+    const status = await githubStatus({});
+    expect(status.id).toBe('github');
+    expect(status.kind).toBe('developer');
+    expect(status.state).toBe('not_configured');
+    expect(status.detail).toMatch(/GITHUB_TOKEN/);
+  });
+});
+
+describe('odooStatus', () => {
+  test('reports not_configured unless all four fields are set', async () => {
+    expect((await odooStatus({})).state).toBe('not_configured');
+    expect(
+      (
+        await odooStatus({
+          ODOO_URL: 'https://x.odoo.com',
+          ODOO_DB: 'x',
+          ODOO_USERNAME: 'a@b.c',
+          // no ODOO_API_KEY
+        })
+      ).state,
+    ).toBe('not_configured');
+  });
+});
+
+describe('rionaStatus', () => {
+  test('reports not_configured without RIONA_BASE_URL', async () => {
+    const status = await rionaStatus({});
+    expect(status.id).toBe('riona');
+    expect(status.kind).toBe('social');
+    expect(status.state).toBe('not_configured');
+    expect(status.detail).toMatch(/RIONA_BASE_URL/);
+  });
+});
+
+describe('rionaLogin', () => {
+  test('fails fast when IG credentials are missing, even with a base URL set', async () => {
+    const result = await rionaLogin({ RIONA_BASE_URL: 'https://example.com' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/RIONA_IG_USERNAME/);
+  });
+
+  test('fails without RIONA_BASE_URL regardless of credentials', async () => {
+    const result = await rionaLogin({ RIONA_IG_USERNAME: 'a', RIONA_IG_PASSWORD: 'b' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/RIONA_BASE_URL/);
   });
 });
 

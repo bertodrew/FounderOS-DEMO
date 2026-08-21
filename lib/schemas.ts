@@ -433,6 +433,23 @@ export const WorkflowSchema = z.object({
   steps: z.array(WorkflowStepSchema),
 });
 
+// ── Profiles — user-managed company/venture lenses over the shared DB ───────
+// One database, one G-Brain, one agent roster: profiles never partition the
+// data, they're saved filters (which agents serve them, current focus, the
+// G-Brain tag their pages carry). Fully user-editable — create one per real
+// company you run, delete the seeded examples once you don't need them.
+export const ProfileSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.string(), // "AI agency", "Mentorship program"…
+  color: z.string(), // hex accent
+  detail: z.string(),
+  brainTag: z.string().min(1),
+  focus: z.array(z.string()), // executive priorities — free text, editable
+  areaAgents: z.record(z.array(z.string())), // life-area id -> agent ids serving it
+  order: z.number().int(),
+});
+
 // ── Skills — the agent workforce's capability library ───────────────────────
 export const SkillStatusSchema = z.enum(['live', 'learning', 'planned']);
 export const SkillSchema = z.object({
@@ -462,7 +479,9 @@ export const RosterClientSchema = z.object({
 // ── Funnel — client journeys from first touch to conversion ─────────────────
 // Canonical stages; `nurtured` is optional so a journey renders as 4–5 touches.
 export const FunnelStageSchema = z.enum(['first_touch', 'engaged', 'nurtured', 'opted_in', 'converted']);
-export const FunnelVentureSchema = z.enum(['vantage', 'launchpad-cohort']);
+// Free-form profile id — profiles are user-created/deletable (lib/db.ts `profiles`
+// table), so this can't be a fixed enum.
+export const FunnelVentureSchema = z.string().min(1);
 export const FunnelChannelSchema = z.enum(['organic', 'ads', 'dm', 'email', 'webinar', 'call', 'checkout', 'crm']);
 // Where each touch comes from: Trakyo (organic attribution), Meta Ads MCP
 // (paid), Attio (live CRM pipeline), manual otherwise. Seeded rows carry the
@@ -590,5 +609,6 @@ export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
 export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;
 export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
 export type Workflow = z.infer<typeof WorkflowSchema>;
+export type Profile = z.infer<typeof ProfileSchema>;
 export type SkillStatus = z.infer<typeof SkillStatusSchema>;
 export type Skill = z.infer<typeof SkillSchema>;

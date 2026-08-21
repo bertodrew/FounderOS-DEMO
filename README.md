@@ -143,6 +143,12 @@ keeps the same repo-layer contract and swaps in real backends:
   wiring a real source (IMAP inboxes, Slack, Stripe, Notion, a CRM, calendar,
   social) is just supplying credentials. The UI immediately reflects real state
   instead of seeded data.
+- **CRM options under consideration.** Beyond the wired Attio/GoHighLevel/Odoo
+  connectors: [Comp AI CRM](https://github.com/trycompai/crm) — an
+  open-source, agentic-first CRM (Next.js/tRPC/NestJS, Postgres, self-hosted
+  on Vercel) built around an autonomous research agent rather than a
+  traditional CRM UI. Candidate for a self-hosted CRM path instead of a
+  third-party API.
 - **Agents run for real.** Each agent's `run()` executes against the live
   connectors and the knowledge layer, on a schedule, with runs persisted.
 

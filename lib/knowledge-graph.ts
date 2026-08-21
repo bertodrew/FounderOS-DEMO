@@ -1,5 +1,6 @@
 import type { Agent, Department, Person, SopTask } from '@/lib/schemas';
 import { lifeAreaForDepartment } from '@/lib/life-map';
+import { FOUNDER_NAME } from '@/lib/identity';
 
 /**
  * The operating-knowledge graph that powers the /brain force graph — Alex's
@@ -149,7 +150,7 @@ export function buildKnowledgeGraph(
 
   // Alex at the core — every pillar hangs off him (the life-at-the-core idea
   // folded in from the old life map).
-  nodes.push({ id: SELF_ID, kind: 'self', label: 'Alex', ring: RING.self });
+  nodes.push({ id: SELF_ID, kind: 'self', label: FOUNDER_NAME, ring: RING.self });
 
   // Teams / life pillars (ring 1) — only departments that actually have workers,
   // tinted with their life-area color.

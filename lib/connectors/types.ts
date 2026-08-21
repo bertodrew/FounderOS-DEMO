@@ -13,7 +13,8 @@ export type ConnectorKind =
   | 'creative'
   | 'knowledge'
   | 'local'
-  | 'orchestration';
+  | 'orchestration'
+  | 'developer';
 
 export type ConnectorStatus = {
   id: string;

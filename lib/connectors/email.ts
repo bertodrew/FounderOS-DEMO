@@ -83,6 +83,37 @@ export function imapClientOptions(config: InboxConfig) {
   };
 }
 
+/**
+ * Validate a submitted (not-yet-saved) IMAP credential set by actually
+ * connecting — used by the connect flow so a bad password never gets
+ * silently written to .env.local.
+ */
+export async function testImapConnection(
+  config: { host: string; user: string; pass: string; port?: number },
+  ImapFlowCtor: typeof ImapFlow = ImapFlow,
+): Promise<{ ok: boolean; error?: string }> {
+  const client = new ImapFlowCtor(
+    imapClientOptions({
+      id: 'test',
+      name: config.user,
+      host: config.host,
+      port: config.port ?? 993,
+      user: config.user,
+      pass: config.pass,
+      smtpHost: '',
+      smtpPort: 465,
+    }),
+  );
+  try {
+    await client.connect();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 async function unreadCount(config: InboxConfig): Promise<InboxUnread> {
   const client = new ImapFlow(imapClientOptions(config));
   try {

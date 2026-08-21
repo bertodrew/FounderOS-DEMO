@@ -47,7 +47,7 @@ export type TreeLayoutResult = {
 // a real trunk up to the department, then task limbs, the worker band directly
 // above them, and the tool canopy along the top. The team→task hop gets the
 // biggest rise so the widest fan (tasks) has room under the ≤45° cap.
-const DEPTH_FRAC = [0.86, 0.76, 0.5, 0.28, 0.09]; // 0 self · 1 team · 2 tasks · 3 workers · 4 tools — sized for the SETTLED physics (the node column pushes self ~16u below target), so the memory core at the trunk base keeps clear of the bottom edge even after equilibrium
+const DEPTH_FRAC = [0.86, 0.76, 0.47, 0.28, 0.09]; // 0 self · 1 team · 2 tasks · 3 workers · 4 tools — sized for the SETTLED physics (the node column pushes self ~16u below target), so the memory core at the trunk base keeps clear of the bottom edge even after equilibrium. Team→task gap widened slightly (0.5→0.47) so the densest department's task row (currently 8 siblings) still clears the 48px minimum sibling gap under the ≤45° cone cap.
 
 // fan tasks out to the full 45° cone so they're well-spread and readable
 const CONE = 1.0;

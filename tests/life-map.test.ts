@@ -6,6 +6,7 @@ import {
   lifeAreaForDepartment,
 } from '@/lib/life-map';
 import { LifeMapSchema } from '@/lib/schemas';
+import { FOUNDER_NAME } from '@/lib/identity';
 import { realAgents } from '@/lib/agents/real';
 import { AGENT_BRAIN_SCOPES } from '@/lib/brain-graph';
 
@@ -64,10 +65,10 @@ describe('CONTACT_TIERS', () => {
 describe('buildLifeMap', () => {
   const map = buildLifeMap();
 
-  test('has a single center node labeled for Alex', () => {
+  test('has a single center node labeled for the founder', () => {
     const centers = map.nodes.filter((n) => n.type === 'center');
     expect(centers).toHaveLength(1);
-    expect(centers[0].label.toLowerCase()).toContain('alex');
+    expect(centers[0].label.toLowerCase()).toContain(FOUNDER_NAME.toLowerCase());
   });
 
   test('one area node per life area, each linked to the center', () => {

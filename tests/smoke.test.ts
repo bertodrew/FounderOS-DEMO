@@ -41,6 +41,8 @@ const PAGES: PageEntry[] = [
   { file: 'analytics/page.tsx', load: () => import('@/app/analytics/page') },
   { file: 'reference/page.tsx', load: () => import('@/app/reference/page') },
   { file: 'personas/page.tsx', load: () => import('@/app/personas/page') },
+  { file: 'login/page.tsx', load: () => import('@/app/login/page') },
+  { file: 'onboarding/page.tsx', load: () => import('@/app/onboarding/page') },
 ];
 
 function discoverPages(dir: string, base = ''): string[] {
