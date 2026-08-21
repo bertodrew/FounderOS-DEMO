@@ -1660,7 +1660,21 @@ export const defaultProfiles: Profile[] = [
   },
 ];
 
+/**
+ * SEED_DEMO_DATA=false drops every fictional-business row (people, example
+ * profiles, demo tasks, social/email/funnel history) while keeping the
+ * structural/product model (departments, the 25 template agents, their
+ * SOPs, skills, tools, roadmap) — the difference between a populated demo
+ * and a clean start for your own data. Defaults to on so local dev, the
+ * seed script, and the existing test suite are unaffected.
+ */
+function seedDemoDataEnabled(): boolean {
+  return process.env.SEED_DEMO_DATA !== 'false';
+}
+
 export function seedDatabase(db: FounderDb): void {
+  const seedDemo = seedDemoDataEnabled();
+
   // INSERT OR REPLACE in every repo makes re-seeding idempotent by id.
   for (const d of departments) db.departments.insert(d);
   for (const a of agents) db.agents.insert(a);
@@ -1668,34 +1682,54 @@ export function seedDatabase(db: FounderDb): void {
   // and departments that left the operating model go with them.
   db.agents.deleteWhereIdNotIn(agents.map((a) => a.id));
   db.departments.deleteWhereIdNotIn(departments.map((d) => d.id));
-  for (const p of people) db.people.insert(p);
-  db.people.deleteWhereIdNotIn(people.map((p) => p.id));
-  for (const t of sopTasks) db.sopTasks.insert(t);
-  db.sopTasks.deleteWhereIdNotIn(sopTasks.map((t) => t.id));
+
+  if (seedDemo) {
+    for (const p of people) db.people.insert(p);
+    db.people.deleteWhereIdNotIn(people.map((p) => p.id));
+  } else {
+    db.people.deleteWhereIdNotIn([]);
+  }
+
+  // sopTasks are structural (every agent's operating procedure) except the
+  // one person-assigned entry, which follows `people`.
+  const sopTasksToSeed = seedDemo ? sopTasks : sopTasks.filter((t) => t.assigneeKind !== 'person');
+  for (const t of sopTasksToSeed) db.sopTasks.insert(t);
+  db.sopTasks.deleteWhereIdNotIn(sopTasksToSeed.map((t) => t.id));
+
   for (const w of workflows) db.workflows.insert(w);
   db.workflows.deleteWhereIdNotIn(workflows.map((w) => w.id));
   // Not pruned: profiles are user-owned from here on — a re-seed restores
-  // the two examples if missing but never deletes a profile you created.
-  for (const p of defaultProfiles) db.profiles.insert(p);
+  // the two examples if missing (and demo data is on) but never deletes a
+  // profile you created, and never recreates them once you've turned demo
+  // data off.
+  if (seedDemo) {
+    for (const p of defaultProfiles) db.profiles.insert(p);
+  }
   for (const s of skills) db.skills.insert({ ...s, markdown: skillDoc(s) });
   db.skills.deleteWhereIdNotIn(skills.map((s) => s.id));
-  for (const t of agentTasks) db.agentTasks.insert(t); // insert-by-id; user tasks coexist
+  if (seedDemo) {
+    for (const t of agentTasks) db.agentTasks.insert(t); // insert-by-id; user tasks coexist
+  }
   for (const t of tools) db.tools.insert(t);
   for (const r of roadmap) db.roadmap.insert(r);
   for (const m of metrics) db.metrics.insert(m);
   for (const d of domains) db.domains.insert(d);
   for (const p of PERSONAS) db.personas.insert(p);
   for (const p of phases) db.phases.insert(p);
-  for (const a of socialAccounts) db.social.upsertAccount(a);
-  for (const s of socialBaseline) db.social.insertSnapshot(s);
-  for (const d of socialDms) db.social.upsertDm(d);
-  for (const s of socialDmSnapshots) db.social.insertDmSnapshot(s);
-  for (const m of socialDmMessages) db.social.upsertDmMessage(m);
+  if (seedDemo) {
+    for (const a of socialAccounts) db.social.upsertAccount(a);
+    for (const s of socialBaseline) db.social.insertSnapshot(s);
+    for (const d of socialDms) db.social.upsertDm(d);
+    for (const s of socialDmSnapshots) db.social.insertDmSnapshot(s);
+    for (const m of socialDmMessages) db.social.upsertDmMessage(m);
+  }
   // Retired dummy email history leaves the DB on re-seed; the real Beehiiv
   // baseline is authoritative. Live-synced snapshots survive.
   db.emailList.deleteSeeded();
-  for (const s of emailListBaseline) db.emailList.insertSnapshot(s);
-  for (const p of socialPosts) db.socialPosts.enqueue(p);
-  for (const c of funnelContacts) db.funnel.insertContact(c);
-  for (const t of funnelTouches) db.funnel.insertTouch(t);
+  if (seedDemo) {
+    for (const s of emailListBaseline) db.emailList.insertSnapshot(s);
+    for (const p of socialPosts) db.socialPosts.enqueue(p);
+    for (const c of funnelContacts) db.funnel.insertContact(c);
+    for (const t of funnelTouches) db.funnel.insertTouch(t);
+  }
 }
