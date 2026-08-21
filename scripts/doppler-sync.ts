@@ -41,6 +41,9 @@ function parseArgs(argv: string[]): Options {
   };
 }
 
+/** null when the CLI is absent OR present but not runnable. The deprecated
+ *  `doppler-cli` npm package installs a `doppler` that throws on every call,
+ *  so "it is on PATH" is not the same as "it works". */
 async function dopplerVersion(): Promise<string | null> {
   try {
     const { stdout } = await run('doppler', ['--version']);
@@ -94,8 +97,10 @@ async function main(): Promise<void> {
   const version = await dopplerVersion();
   if (!version) {
     console.error(
-      '  doppler CLI not found on PATH. Install it (https://docs.doppler.com/docs/install-cli),\n' +
-        '  run `doppler login`, then re-run this with --apply.\n',
+      '  No working doppler CLI. Install the official Go CLI\n' +
+        '  (https://docs.doppler.com/docs/install-cli), run `doppler login`, then re-run\n' +
+        '  with --apply. Note: the `doppler-cli` package on npm is a deprecated stub that\n' +
+        '  throws on every call, so installing it puts a broken `doppler` on your PATH.\n',
     );
     process.exitCode = 1;
     return;
