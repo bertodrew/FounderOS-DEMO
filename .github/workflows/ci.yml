@@ -19,7 +19,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Must track package.json `engines`. Node 22 aborts better-sqlite3
+          # with SIGABRT on the first query, so CI green on 22 would be a lie.
+          node-version: 20
           cache: npm
 
       # `npm ci` needs the lockfile to match package.json exactly, which is the

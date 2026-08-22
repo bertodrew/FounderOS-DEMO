@@ -3,8 +3,13 @@
 # Multi-stage so the runtime layer carries no compiler and no dev dependencies.
 # better-sqlite3 is a native addon: it is compiled in the build stage and the
 # resulting binary is traced into the standalone output by Next.
+#
+# Node 20, not 22, and not by accident: Node 22.x has a regression in
+# NAN-style ObjectWrap cleanup hooks that aborts better-sqlite3 with SIGABRT on
+# the first DB query. package.json pins `engines: 20.x` for the same reason, so
+# these must move together.
 
-FROM node:22-bookworm-slim AS deps
+FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 # Toolchain for better-sqlite3 when no prebuilt binary matches this platform.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -13,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:22-bookworm-slim AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -22,7 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV FOUNDER_OS_DB=:memory:
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

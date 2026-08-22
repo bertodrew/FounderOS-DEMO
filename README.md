@@ -20,7 +20,8 @@ you explore and run it yourself.
 
 ## Quick start
 
-Requires **Node 18+**.
+Requires **Node 20.x** (see `engines` in `package.json`). Not Node 22: it has a
+regression that aborts `better-sqlite3` with SIGABRT on the first query.
 
 ```bash
 npm install
