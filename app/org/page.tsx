@@ -4,6 +4,7 @@ import { getDb } from '@/lib/data';
 import { buildHierarchy, flattenNodes, type AgentNode } from '@/lib/hierarchy';
 import { LIFE_AREAS, lifeAreaForDepartment } from '@/lib/life-map';
 import { getVenture, ventureAgentSet, venturesForAgent, type Venture } from '@/lib/ventures';
+import { PROJECT_AGENT_IDS } from '@/lib/projects';
 import { ConductorCard } from '@/components/ConductorCard';
 import { ProfileManager } from '@/components/ProfileManager';
 import { SparkIcon } from '@/components/SparkIcon';
@@ -89,7 +90,9 @@ function SystemCard({ href, title, caption }: { href: string; title: string; cap
 export default function OrgChartPage({ searchParams }: { searchParams?: { venture?: string } }) {
   const db = getDb();
   const departments = db.departments.all();
-  const agents = db.agents.all();
+  // Project-portfolio agents (lib/projects.ts) live on /projects, not in the
+  // five-pillar org chart — keeps this tree's density/markup as it was.
+  const agents = db.agents.all().filter((a) => !PROJECT_AGENT_IDS.has(a.id));
   const ventures = db.profiles.all();
   // The venture lens: same roster, same DB — the switcher just changes which
   // crew lights up. No venture param = everything bright.

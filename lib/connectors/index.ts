@@ -19,6 +19,7 @@ import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
 import { githubStatus } from '@/lib/connectors/github';
+import { vercelStatus } from '@/lib/connectors/vercel';
 import { odooStatus } from '@/lib/connectors/odoo';
 import { rionaStatus } from '@/lib/connectors/riona';
 import { getBrainProvider } from '@/lib/brain';
@@ -62,6 +63,7 @@ const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][
   ['ghl', 'crm', ghlStatus],
   ['odoo', 'crm', () => odooStatus(runtimeEnv())],
   ['github', 'developer', () => githubStatus(runtimeEnv())],
+  ['vercel', 'developer', () => vercelStatus(runtimeEnv())],
   ['arcads', 'creative', arcadsStatus],
   ['wispr', 'local', wisprStatus],
   ['local-stack', 'local', localStackStatus],

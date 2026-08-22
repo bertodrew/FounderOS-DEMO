@@ -7,6 +7,7 @@ import { buildKnowledgeGraph } from '@/lib/knowledge-graph';
 import { distillMemoryGraph, type MemoryGraph } from '@/lib/memory-core';
 import { foldersToClusters } from '@/lib/brain-viz';
 import { getDb } from '@/lib/data';
+import { PROJECT_AGENT_IDS } from '@/lib/projects';
 import { PageHeader } from '@/components/PageHeader';
 import { BrainCore } from '@/components/BrainCore';
 import { PillarRadar } from '@/components/PillarRadar';
@@ -145,7 +146,11 @@ export default async function BrainPage() {
   const overview = await createGBrainProvider().overview();
   const { store, doctor } = overview;
   const db = getDb();
-  const knowledgeGraph = buildKnowledgeGraph(db.agents.all(), db.departments.all(), db.people.all(), db.sopTasks.all());
+  // Project-portfolio agents/SOPs (lib/projects.ts) live on /projects, not in
+  // this graph — keeps its density as it was before the portfolio existed.
+  const deptAgents = db.agents.all().filter((a) => !PROJECT_AGENT_IDS.has(a.id));
+  const deptTasks = db.sopTasks.all().filter((t) => !PROJECT_AGENT_IDS.has(t.assigneeId));
+  const knowledgeGraph = buildKnowledgeGraph(deptAgents, db.departments.all(), db.people.all(), deptTasks);
   const maxFiles = Math.max(1, ...store.folders.map((f) => f.files));
   const clusters = foldersToClusters(store.folders);
   const storeShort = store.path.replace(process.env.HOME ?? '', '~');
@@ -206,10 +211,10 @@ export default async function BrainPage() {
         <SectionHead label="Knowledge graph" count={`${knowledgeGraph.nodes.length} nodes`} />
         <BrainGraphView
           graph={knowledgeGraph}
-          agents={db.agents.all()}
+          agents={deptAgents}
           departments={db.departments.all()}
           people={db.people.all()}
-          tasks={db.sopTasks.all()}
+          tasks={deptTasks}
           memory={memoryConstellation()}
           clients={await clientRoster(db)}
           runsByAgent={runsByAgent}
@@ -227,7 +232,7 @@ export default async function BrainPage() {
             </span>
           </div>
           <PillarRadar
-            axes={pillarRadarAxes(db.departments.all(), db.agents.all(), db.sopTasks.all(), runsByAgent)}
+            axes={pillarRadarAxes(db.departments.all(), deptAgents, deptTasks, runsByAgent)}
             health={doctor.healthScore}
             warnings={warnings.length}
           />

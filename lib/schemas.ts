@@ -14,6 +14,19 @@ export const DepartmentSchema = z.object({
   order: z.number().int(),
 });
 
+// One entry in the project portfolio — a separate GitHub repo deployed on
+// Vercel, distinct from the departmental agent roster. See lib/projects.ts.
+export const ProjectSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  repoOwner: z.string().min(1),
+  repoName: z.string().min(1),
+  vercelProjectId: z.string().nullable(),
+  description: z.string(),
+  color: z.string().min(1),
+  order: z.number().int(),
+});
+
 export const AgentSchema = z.object({
   id: z.string().min(1),
   departmentId: z.string().min(1),
@@ -28,6 +41,11 @@ export const AgentSchema = z.object({
   // instance names the runtime that will host this agent ('builtin' today,
   // an OpenClaw/Claude Code instance name once the dedicated host is live).
   parentId: z.string().nullable().default(null),
+  // Set for agents scoped to one entry in the project portfolio (lib/projects.ts);
+  // null/omitted for the shared departmental roster. Optional (not .default())
+  // so the ~90 existing department-agent literals in lib/seed.ts don't all
+  // need a `projectId: null` added just to keep compiling.
+  projectId: z.string().nullable().optional(),
   instance: z.string().min(1).default('builtin'),
 });
 
@@ -550,6 +568,7 @@ export const FunnelSummarySchema = z.object({
 });
 
 export type Department = z.infer<typeof DepartmentSchema>;
+export type Project = z.infer<typeof ProjectSchema>;
 export type Agent = z.infer<typeof AgentSchema>;
 export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export type Tool = z.infer<typeof ToolSchema>;

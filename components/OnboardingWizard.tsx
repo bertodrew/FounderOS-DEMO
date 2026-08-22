@@ -21,7 +21,7 @@ const STEPS: { title: string; blurb: string; slugs: string[] }[] = [
   { title: 'CRM & sales', blurb: '', slugs: ['attio', 'gohighlevel', 'odoo'] },
   { title: 'Payments', blurb: '', slugs: ['stripe'] },
   { title: 'Marketing & social', blurb: '', slugs: ['zernio', 'riona', 'arcads', 'meta', 'manychat'] },
-  { title: 'Growth & knowledge', blurb: 'Obsidian reads a local vault — nothing to paste here.', slugs: ['beehiiv', 'webinarjam', 'trakyo', 'notion', 'github', 'miro', 'obsidian'] },
+  { title: 'Growth & knowledge', blurb: 'Obsidian reads a local vault — nothing to paste here.', slugs: ['beehiiv', 'webinarjam', 'trakyo', 'notion', 'github', 'vercel', 'miro', 'obsidian'] },
 ];
 
 export function OnboardingWizard({

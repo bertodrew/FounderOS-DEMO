@@ -44,7 +44,7 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'github', name: 'GitHub', tagline: 'Repos, issues & PRs', category: 'Developer', popular: true, connectorId: 'github', envKeys: ['GITHUB_TOKEN'] },
   { slug: 'linear', name: 'Linear', tagline: 'Issues & projects', category: 'Developer' },
   { slug: 'jira', name: 'Jira', tagline: 'Boards & tickets', category: 'Developer' },
-  { slug: 'vercel', name: 'Vercel', tagline: 'Deploys & logs', category: 'Developer' },
+  { slug: 'vercel', name: 'Vercel', tagline: 'Deploys & logs', category: 'Developer', connectorId: 'vercel', envKeys: ['VERCEL_TOKEN', 'VERCEL_TEAM_ID'] },
   { slug: 'sentry', name: 'Sentry', tagline: 'Errors & traces', category: 'Developer' },
   { slug: 'gitlab', name: 'GitLab', tagline: 'Repos & pipelines', category: 'Developer' },
 
