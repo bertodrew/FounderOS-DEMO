@@ -187,6 +187,7 @@ describe('wheel stage — pillars ride the top arc of a wheel', () => {
 import { buildKnowledgeGraph, workerNodeId } from '@/lib/knowledge-graph';
 import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
+import { PROJECT_AGENT_IDS } from '@/lib/projects';
 
 const W = 880;
 const H = 600;
@@ -355,10 +356,12 @@ describe('treeLayout spacing on the real seeded org (largest departments)', () =
   seedDatabase(db);
   afterAll(() => db.close());
 
-  const agents = db.agents.all();
+  // Same exclusion app/brain/page.tsx applies: project-portfolio agents live
+  // on /projects, not this graph.
+  const agents = db.agents.all().filter((a) => !PROJECT_AGENT_IDS.has(a.id));
   const departments = db.departments.all();
   const people = db.people.all();
-  const tasks = db.sopTasks.all();
+  const tasks = db.sopTasks.all().filter((t) => !PROJECT_AGENT_IDS.has(t.assigneeId));
   const graph = buildKnowledgeGraph(agents, departments, people, tasks);
 
   const MIN_GAP = 48;

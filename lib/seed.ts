@@ -1,6 +1,7 @@
 import type { FounderDb } from '@/lib/db';
 import { PERSONAS } from '@/lib/personas-seed';
 import { FOUNDER_NAME } from '@/lib/identity';
+import { PROJECTS, PROJECT_ROLES, projectAgentId } from '@/lib/projects';
 import type {
   Agent,
   AgentTask,
@@ -12,6 +13,7 @@ import type {
   Metric,
   Person,
   Phase,
+  Project,
   RoadmapItem,
   SopTask,
   Workflow,
@@ -466,6 +468,53 @@ const agents: Agent[] = [
     instance: 'builtin',
   },
 ];
+
+// The project portfolio (lib/projects.ts) and each project's four dedicated
+// agents (Support, Customer Service, Account, Marketing). Structural, like
+// `departments`/`agents` above — seeded regardless of SEED_DEMO_DATA, and
+// registered as real runtime agents in lib/agents/project-agents.ts (never a
+// larp agent — see tests/seed.test.ts).
+const projects: Project[] = PROJECTS.map((p) => ({
+  id: p.id,
+  name: p.name,
+  repoOwner: p.repoOwner,
+  repoName: p.repoName,
+  vercelProjectId: p.vercelProjectId,
+  description: p.description,
+  color: p.color,
+  order: p.order,
+}));
+
+const projectAgents: Agent[] = PROJECTS.flatMap((p) =>
+  PROJECT_ROLES.map((role) => ({
+    id: projectAgentId(p, role),
+    departmentId: role.departmentId,
+    name: `${p.name} ${role.title}`,
+    role: role.title,
+    status: 'planned' as const,
+    tier: 'worker' as const,
+    description: role.description(p),
+    model: role.model,
+    tools: role.tools,
+    parentId: role.parentId,
+    instance: 'builtin',
+    projectId: p.id,
+  })),
+);
+
+// Every agent needs exactly one SOP task (tests/sops.test.ts) — the project
+// agents are no exception.
+const projectSopTasks: SopTask[] = PROJECTS.flatMap((p) =>
+  PROJECT_ROLES.map((role) => ({
+    id: `sop-${projectAgentId(p, role)}`,
+    departmentId: role.departmentId,
+    assigneeKind: 'agent' as const,
+    assigneeId: projectAgentId(p, role),
+    title: role.sopTitle,
+    summary: role.sopSummary(p),
+    steps: role.sopSteps(p),
+  })),
+);
 
 // ── Humans in the process ─────────────────────────────────────────────────────
 // Real heads (Marco, Nadia) plus larp-first seeds for the roles Alex will hire
@@ -1677,11 +1726,14 @@ export function seedDatabase(db: FounderDb): void {
 
   // INSERT OR REPLACE in every repo makes re-seeding idempotent by id.
   for (const d of departments) db.departments.insert(d);
-  for (const a of agents) db.agents.insert(a);
+  for (const p of projects) db.projects.insert(p);
+  const allAgents = [...agents, ...projectAgents];
+  for (const a of allAgents) db.agents.insert(a);
   // The roster IS the runtime: rows that left the roster leave the DB too,
-  // and departments that left the operating model go with them.
-  db.agents.deleteWhereIdNotIn(agents.map((a) => a.id));
+  // and departments/projects that left the operating model go with them.
+  db.agents.deleteWhereIdNotIn(allAgents.map((a) => a.id));
   db.departments.deleteWhereIdNotIn(departments.map((d) => d.id));
+  db.projects.deleteWhereIdNotIn(projects.map((p) => p.id));
 
   if (seedDemo) {
     for (const p of people) db.people.insert(p);
@@ -1692,7 +1744,10 @@ export function seedDatabase(db: FounderDb): void {
 
   // sopTasks are structural (every agent's operating procedure) except the
   // one person-assigned entry, which follows `people`.
-  const sopTasksToSeed = seedDemo ? sopTasks : sopTasks.filter((t) => t.assigneeKind !== 'person');
+  const sopTasksToSeed = [
+    ...(seedDemo ? sopTasks : sopTasks.filter((t) => t.assigneeKind !== 'person')),
+    ...projectSopTasks,
+  ];
   for (const t of sopTasksToSeed) db.sopTasks.insert(t);
   db.sopTasks.deleteWhereIdNotIn(sopTasksToSeed.map((t) => t.id));
 

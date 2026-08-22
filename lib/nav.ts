@@ -22,12 +22,14 @@ import {
   LayoutGrid,
   Layers,
   CheckSquare,
+  FolderKanban,
 } from 'lucide-react';
 
 export type NavItem = { href: string; label: string; icon: typeof Home };
 
 export const NAV_OPERATE: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
+  { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/comms', label: 'Comms', icon: MessageSquare },
   { href: '/funnel', label: 'Funnel', icon: Filter },
   { href: '/workflows', label: 'Workflows', icon: Workflow },

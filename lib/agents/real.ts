@@ -14,6 +14,7 @@ import { rionaStatus } from '@/lib/connectors/riona';
 import { whatsappStatus } from '@/lib/connectors/whatsapp';
 import { wisprStatus } from '@/lib/connectors/wispr';
 import { localStackStatus } from '@/lib/connectors/local-stack';
+import { projectAgents } from '@/lib/agents/project-agents';
 import { getDb } from '@/lib/data';
 import type { LlmToolSpec } from '@/lib/connectors/llm';
 import type { AgentRunResult, RuntimeAgent } from '@/lib/agents/runtime';
@@ -535,4 +536,7 @@ export const realAgents: RuntimeAgent[] = [
       };
     },
   },
+
+  // ── Project portfolio (lib/projects.ts) ────────────────────────────────
+  ...projectAgents,
 ];

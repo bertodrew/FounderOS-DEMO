@@ -41,6 +41,7 @@ describe('openDb', () => {
       tools: ['openclaw', 'mcp'],
       parentId: null,
       instance: 'builtin',
+      projectId: null,
     };
     db.agents.insert(agent);
     expect(db.agents.all()).toEqual([agent]);

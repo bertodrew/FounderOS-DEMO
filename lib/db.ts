@@ -31,6 +31,7 @@ import {
   SkillSchema,
   ToolSchema,
   ProfileSchema,
+  ProjectSchema,
   type Agent,
   type AgentCron,
   type AgentMessage,
@@ -63,6 +64,7 @@ import {
   type Skill,
   type Tool,
   type Profile,
+  type Project,
 } from '@/lib/schemas';
 
 /**
@@ -324,6 +326,16 @@ CREATE TABLE IF NOT EXISTS skills (
   markdown TEXT NOT NULL DEFAULT '',
   ord INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  repo_owner TEXT NOT NULL,
+  repo_name TEXT NOT NULL,
+  vercel_project_id TEXT,
+  description TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL,
+  "order" INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS profiles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -344,6 +356,7 @@ function migrateAgentsTable(db: InstanceType<typeof Database>): void {
   );
   if (!columns.has('parent_id')) db.exec('ALTER TABLE agents ADD COLUMN parent_id TEXT');
   if (!columns.has('instance')) db.exec("ALTER TABLE agents ADD COLUMN instance TEXT NOT NULL DEFAULT 'builtin'");
+  if (!columns.has('project_id')) db.exec('ALTER TABLE agents ADD COLUMN project_id TEXT');
 }
 
 /** Databases created before the funnel-space build lack these columns. */
@@ -383,6 +396,7 @@ type AgentRow = {
   tools: string;
   parent_id: string | null;
   instance: string;
+  project_id: string | null;
 };
 
 function rowToAgent(row: AgentRow): Agent {
@@ -398,6 +412,7 @@ function rowToAgent(row: AgentRow): Agent {
     tools: parseJsonArray(row.tools, []),
     parentId: row.parent_id,
     instance: row.instance,
+    projectId: row.project_id,
   });
 }
 
@@ -440,15 +455,49 @@ export function openDb(path: string) {
     },
     insert(a: Agent): void {
       db.prepare(
-        'INSERT OR REPLACE INTO agents (id, department_id, name, role, status, tier, description, model, tools, parent_id, instance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO agents (id, department_id, name, role, status, tier, description, model, tools, parent_id, instance, project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       ).run(
         a.id, a.departmentId, a.name, a.role, a.status, a.tier, a.description, a.model,
-        JSON.stringify(a.tools), a.parentId, a.instance,
+        JSON.stringify(a.tools), a.parentId, a.instance, a.projectId ?? null,
       );
+    },
+    byProject(projectId: string): Agent[] {
+      return (
+        db.prepare('SELECT * FROM agents WHERE project_id = ? ORDER BY tier, name').all(projectId) as AgentRow[]
+      ).map(rowToAgent);
     },
     deleteWhereIdNotIn(ids: string[]): void {
       const placeholders = ids.map(() => '?').join(', ');
       db.prepare(`DELETE FROM agents WHERE id NOT IN (${placeholders})`).run(...ids);
+    },
+  };
+
+  const projects = {
+    all(): Project[] {
+      return db
+        .prepare('SELECT * FROM projects ORDER BY "order"')
+        .all()
+        .map((r: any) =>
+          ProjectSchema.parse({
+            id: r.id,
+            name: r.name,
+            repoOwner: r.repo_owner,
+            repoName: r.repo_name,
+            vercelProjectId: r.vercel_project_id,
+            description: r.description,
+            color: r.color,
+            order: r.order,
+          }),
+        );
+    },
+    insert(p: Project): void {
+      db.prepare(
+        'INSERT OR REPLACE INTO projects (id, name, repo_owner, repo_name, vercel_project_id, description, color, "order") VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(p.id, p.name, p.repoOwner, p.repoName, p.vercelProjectId, p.description, p.color, p.order);
+    },
+    deleteWhereIdNotIn(ids: string[]): void {
+      const placeholders = ids.map(() => '?').join(', ');
+      db.prepare(`DELETE FROM projects WHERE id NOT IN (${placeholders})`).run(...ids);
     },
   };
 
@@ -1134,6 +1183,7 @@ export function openDb(path: string) {
 
   return {
     departments,
+    projects,
     agents,
     tools,
     roadmap,
