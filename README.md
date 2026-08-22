@@ -209,15 +209,107 @@ so they never touch the seeded dev DB.
 
 ---
 
-## Deploying to Railway
+## Going to production
 
-1. Create a Railway project and point it at this repo.
-2. Set the build command to `npm run build` and the start command to `npm start`
-   (the app serves on the `PORT` Railway provides).
-3. Add a database service and any connector credentials as environment variables
-   in the Railway dashboard.
-4. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
-   services and are referenced by URL from the app's environment.
+The demo is deliberately open: it has to be browsable with no setup. A public
+deployment is a different thing, and the app enforces the difference itself.
+
+### 1. Lock the front door
+
+A deployment holds your comms, clients and revenue, so the whole app sits
+behind a single-operator password. Local `next dev` stays open, so day-to-day
+development needs no setup:
+
+```bash
+AUTH_PASSWORD=your-password
+AUTH_SECRET=$(openssl rand -hex 32)   # signs the session cookie
+```
+
+The gate **fails closed**: in production with these unset, nothing is
+reachable (`503`) rather than silently open. Two paths are exempt, each for a
+reason: `/api/health`, so a platform probe can reach it (a gated health check
+fails every deploy), and `/api/webhooks/*`, since third parties cannot hold a
+session cookie. Those webhooks carry their own secret instead, so set
+`MANYCHAT_WEBHOOK_SECRET` if you use the ManyChat inbox: in production the
+webhook refuses to serve without it.
+
+Writes are also rate limited per IP, with a tighter budget for LLM calls and
+uploads, and the webhooks are metered too since the password gate does not
+cover them. That limiter is **per process**: on a multi-instance deployment
+the effective limit multiplies by the instance count, so put a shared store or
+an edge WAF in front if you scale out.
+
+### 2. Give the store a real disk
+
+The SQLite store must live on a **mounted volume**. The default path lives
+inside the deployment, which most hosts wipe on redeploy, and a serverless
+host's `/tmp` is per-instance and erased on cold start — so agent runs, tasks,
+brain dumps, queued posts, and contact tags would silently disappear.
+
+```bash
+FOUNDER_OS_DB=/data/founder-os.db   # a mounted volume, not the bundle
+```
+
+`GET /api/health` reports this. It answers `degraded` — never `ok` — when the
+store is not durable or when writes are ungated, so a data-losing deploy is
+visible on the first probe instead of at the first lost record.
+
+### 3. Deploy
+
+**Docker / Railway** (recommended — a real disk and a long-lived process):
+
+```bash
+docker build -t founder-os .
+docker run -p 4100:4100 -v founder-os-data:/data \
+  -e AUTH_PASSWORD=... -e AUTH_SECRET=... founder-os
+```
+
+`railway.json` points Railway at the Dockerfile and health-checks
+`/api/health`. Add a volume mounted at `/data`, then set `AUTH_PASSWORD`,
+`AUTH_SECRET`, and
+any connector credentials as environment variables in the dashboard.
+
+**Serverless (Vercel)** runs, but the filesystem is read-only apart from a
+per-instance `/tmp`: the Connections board cannot save pasted credentials
+(it returns a clear `501` pointing you at host env vars), and every write is
+lost on cold start. Point `FOUNDER_OS_DB` at a managed database — or use a
+container host — before treating it as more than a preview.
+
+Credentials go in the host's environment, never in the repo. The knowledge
+services (G-Brain and Optimal Engine) run as companion services and are
+referenced by URL from the app's environment.
+
+### 4. Secrets with Doppler
+
+Configuration lives in the Doppler project **`founder-dashboard`**; `doppler.yaml`
+binds this repo to it so `doppler setup` needs no prompts.
+
+```bash
+doppler setup                    # bind to founder-dashboard
+npm run doppler:sync             # show the plan, values masked, uploads nothing
+npm run doppler:sync -- --apply  # upload to the prd config
+doppler run -- npm start         # run with the secrets injected
+```
+
+`doppler:sync` derives the key list from the same connector catalog the
+Connections board uses, so a connector added there is covered without a second
+list to maintain. It generates the two secrets that are genuinely ours to
+generate (`AUTH_SECRET`, `MANYCHAT_WEBHOOK_SECRET`) and only when they are
+not already set, so re-running never rotates a live secret. It never invents a
+third-party credential: a missing Stripe key is reported as missing rather than
+filled with a placeholder that would look configured and fail on the first real
+call. Values reach Doppler through a `0600` temp file, never as command
+arguments, so they stay out of the process list and your shell history.
+
+On Railway, add the Doppler integration (or set `DOPPLER_TOKEN` as a service
+variable and wrap the start command in `doppler run --`) so the container gets
+its configuration without any secret living in the image.
+
+### 5. CI
+
+`.github/workflows/ci.yml` runs typecheck, the full vitest suite, and a
+production build on every pull request, plus a secret scan that fails the
+build if credential-shaped files or live key material are ever tracked.
 
 ---
 

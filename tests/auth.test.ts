@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createSessionToken, verifySessionToken } from '@/lib/auth';
+import { createSessionToken, timingSafeEquals, verifySessionToken } from '@/lib/auth';
 
 describe('session token', () => {
   test('a token created with a secret verifies with that same secret', async () => {
@@ -39,5 +39,21 @@ describe('session token', () => {
       'base64url',
     );
     expect(await verifySessionToken(`${past}.${sig}`, 'test-secret')).toBe(false);
+  });
+});
+
+describe('timingSafeEquals', () => {
+  test('compares by value and rejects length mismatches', () => {
+    expect(timingSafeEquals('abc', 'abc')).toBe(true);
+    expect(timingSafeEquals('abc', 'abd')).toBe(false);
+    expect(timingSafeEquals('abc', 'abcd')).toBe(false);
+  });
+
+  test('an empty string is never a valid secret, even against another empty one', () => {
+    // Guards the case where both the configured secret and the presented
+    // header are unset: that must not read as a match.
+    expect(timingSafeEquals('', '')).toBe(false);
+    expect(timingSafeEquals('abc', '')).toBe(false);
+    expect(timingSafeEquals('', 'abc')).toBe(false);
   });
 });

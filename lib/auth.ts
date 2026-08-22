@@ -52,3 +52,17 @@ export async function verifySessionToken(token: string | undefined | null, secre
     return false;
   }
 }
+
+/**
+ * Constant-time string compare for shared secrets that are checked outside the
+ * session gate. `/api/webhooks/*` is exempt from the middleware (third parties
+ * cannot hold a session cookie), so its per-integration secret is the only
+ * thing guarding a write endpoint and deserves a compare that does not leak
+ * the answer through timing. Kept here, edge-safe, so both runtimes can use it.
+ */
+export function timingSafeEquals(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}

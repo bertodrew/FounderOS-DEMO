@@ -1,0 +1,11 @@
+# Binds this directory to the Doppler project that holds the deployment's
+# configuration, so `doppler setup` needs no interactive prompts and every
+# `doppler run` in this repo resolves the same project.
+#
+#   doppler setup                    # bind (reads this file)
+#   npm run doppler:sync             # show what would be uploaded, masked
+#   npm run doppler:sync -- --apply  # upload it
+#   doppler run -- npm start         # run with the secrets injected
+setup:
+  project: founder-dashboard
+  config: dev

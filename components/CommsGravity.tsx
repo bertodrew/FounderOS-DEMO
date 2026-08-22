@@ -80,12 +80,14 @@ export function CommsGravity({
     const person = item.sender ?? item.title;
     const existing = tags.find((t) => t.person === person && t.channel === item.source);
     if (existing?.tier === tier) {
-      await fetch('/api/contacts/tags', {
+      const res = await fetch('/api/contacts/tags', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ person, channel: item.source }),
       });
-      setTags((prev) => prev.filter((t) => !(t.person === person && t.channel === item.source)));
+      if (res.ok) {
+        setTags((prev) => prev.filter((t) => !(t.person === person && t.channel === item.source)));
+      }
       return;
     }
     const tag: ContactTag = { person, channel: item.source, tag: 'manual', tier: tier as 1 | 2 | 3 };

@@ -65,6 +65,20 @@ import {
   type Profile,
 } from '@/lib/schemas';
 
+/**
+ * Parse a JSON string as an array, returning fallback on null, empty, or malformed JSON.
+ * Degrades gracefully: one bad row does not crash the query.
+ */
+function parseJsonArray<T>(raw: string | null | undefined, fallback: T[]): T[] {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const DDL = `
 CREATE TABLE IF NOT EXISTS departments (
   id TEXT PRIMARY KEY,
@@ -146,6 +160,7 @@ CREATE TABLE IF NOT EXISTS agent_runs (
   ok INTEGER NOT NULL,
   summary TEXT NOT NULL DEFAULT ''
 );
+CREATE INDEX IF NOT EXISTS idx_agent_runs_agent_id ON agent_runs (agent_id);
 CREATE TABLE IF NOT EXISTS agent_messages (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
@@ -154,6 +169,7 @@ CREATE TABLE IF NOT EXISTS agent_messages (
   tool_calls TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_agent_messages_agent_id ON agent_messages (agent_id);
 CREATE TABLE IF NOT EXISTS broadcasts (
   id TEXT PRIMARY KEY,
   message TEXT NOT NULL,
@@ -167,6 +183,7 @@ CREATE TABLE IF NOT EXISTS agent_tasks (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_agent_id ON agent_tasks (agent_id);
 CREATE TABLE IF NOT EXISTS agent_crons (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
@@ -175,6 +192,7 @@ CREATE TABLE IF NOT EXISTS agent_crons (
   enabled INTEGER NOT NULL,
   created_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_agent_crons_agent_id ON agent_crons (agent_id);
 CREATE TABLE IF NOT EXISTS contact_tags (
   person TEXT NOT NULL,
   channel TEXT NOT NULL,
@@ -203,6 +221,7 @@ CREATE TABLE IF NOT EXISTS broadcast_replies (
   reply TEXT NOT NULL DEFAULT '',
   finished_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_broadcast_replies_broadcast_id ON broadcast_replies (broadcast_id);
 CREATE TABLE IF NOT EXISTS email_list_snapshots (
   captured_at TEXT PRIMARY KEY,
   subscribers INTEGER NOT NULL,
@@ -285,6 +304,7 @@ CREATE TABLE IF NOT EXISTS funnel_touches (
   source TEXT NOT NULL,
   at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_funnel_touches_contact_id ON funnel_touches (contact_id);
 CREATE TABLE IF NOT EXISTS workflows (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -375,7 +395,7 @@ function rowToAgent(row: AgentRow): Agent {
     tier: row.tier,
     description: row.description,
     model: row.model,
-    tools: JSON.parse(row.tools),
+    tools: parseJsonArray(row.tools, []),
     parentId: row.parent_id,
     instance: row.instance,
   });
@@ -488,7 +508,7 @@ export function openDb(path: string) {
       return db
         .prepare('SELECT * FROM domains ORDER BY number')
         .all()
-        .map((r: any) => DomainSchema.parse({ ...r, items: JSON.parse(r.items) }));
+        .map((r: any) => DomainSchema.parse({ ...r, items: parseJsonArray(r.items, []) }));
     },
     insert(d: Domain): void {
       db.prepare('INSERT OR REPLACE INTO domains (id, number, title, color, items) VALUES (?, ?, ?, ?, ?)').run(
@@ -517,9 +537,9 @@ export function openDb(path: string) {
             summary: r.summary,
             accent: r.accent,
             northStar: r.north_star,
-            pillars: JSON.parse(r.pillars),
-            connectors: JSON.parse(r.connectors),
-            metrics: JSON.parse(r.metrics),
+            pillars: parseJsonArray(r.pillars, []),
+            connectors: parseJsonArray(r.connectors, []),
+            metrics: parseJsonArray(r.metrics, []),
             brainUse: r.brain_use,
             signaturePlay: r.signature_play,
           }),
@@ -553,7 +573,7 @@ export function openDb(path: string) {
       return db
         .prepare('SELECT * FROM phases ORDER BY number')
         .all()
-        .map((r: any) => PhaseSchema.parse({ ...r, items: JSON.parse(r.items) }));
+        .map((r: any) => PhaseSchema.parse({ ...r, items: parseJsonArray(r.items, []) }));
     },
     insert(p: Phase): void {
       db.prepare('INSERT OR REPLACE INTO phases (id, number, title, items) VALUES (?, ?, ?, ?)').run(

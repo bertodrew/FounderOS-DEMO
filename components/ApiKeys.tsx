@@ -5,7 +5,7 @@
  * writes new values to .env.local via POST /api/keys (live immediately).
  * Raw secrets are never displayed back.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { KeyRound, Check } from 'lucide-react';
 import type { KeyStatus } from '@/lib/keys';
 
@@ -15,15 +15,25 @@ export function ApiKeys() {
   const [value, setValue] = useState('');
   const [savedVar, setSavedVar] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = () =>
     fetch('/api/keys')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
       .then((b) => setKeys(b.keys ?? []))
       .catch(() => setError('could not load key statuses'));
 
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   const groups = useMemo(() => {
@@ -51,7 +61,8 @@ export function ApiKeys() {
     setValue('');
     setEditing(null);
     setSavedVar(envVar);
-    setTimeout(() => setSavedVar(null), 2500);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setSavedVar(null), 2500);
     load();
   };
 

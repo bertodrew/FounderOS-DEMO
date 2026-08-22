@@ -64,7 +64,23 @@ export async function POST(req: Request) {
     }
   }
 
-  upsertEnvLocal(Object.fromEntries(names.map((k) => [k, body.values[k].trim()])));
+  try {
+    upsertEnvLocal(Object.fromEntries(names.map((k) => [k, body.values[k].trim()])));
+  } catch (err) {
+    // creds.ts falls back to /tmp on Vercel, but a host with a genuinely
+    // read-only or unwritable path should say so rather than 500 with a stack.
+    const code = (err as NodeJS.ErrnoException)?.code;
+    const readOnly = code === 'EROFS' || code === 'EACCES' || code === 'EPERM';
+    return NextResponse.json(
+      {
+        ok: false,
+        error: readOnly
+          ? 'This deployment has a read-only filesystem. Set connector credentials as environment variables on the host instead.'
+          : 'could not save those credentials',
+      },
+      { status: readOnly ? 501 : 500 },
+    );
+  }
   const saved = readEnvLocal();
   const keySaved = [...allowed].every((k) => Boolean(saved[k]));
   return NextResponse.json({ ok: true, keySaved, partial: !keySaved });

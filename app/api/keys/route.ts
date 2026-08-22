@@ -26,7 +26,23 @@ export async function POST(request: Request) {
   if (!KEY_SLOTS.some((s) => s.envVar === envVar)) {
     return NextResponse.json({ error: `unknown key slot: ${envVar}` }, { status: 400 });
   }
-  upsertEnvLocal(ENV_LOCAL, envVar, value);
+  try {
+    upsertEnvLocal(ENV_LOCAL, envVar, value);
+  } catch (err) {
+    // Serverless bundles are read-only, and a container's disk does not survive
+    // a redeploy — so say that plainly instead of a 500 with a stack trace.
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === 'EROFS' || code === 'EACCES' || code === 'EPERM') {
+      return NextResponse.json(
+        {
+          error:
+            'This deployment has a read-only filesystem. Set connector credentials as environment variables on the host instead of pasting them here.',
+        },
+        { status: 501 },
+      );
+    }
+    return NextResponse.json({ error: 'could not save that key' }, { status: 500 });
+  }
   process.env[envVar] = value; // live immediately; .env.local persists across restarts
   return NextResponse.json({ ok: true, envVar });
 }
