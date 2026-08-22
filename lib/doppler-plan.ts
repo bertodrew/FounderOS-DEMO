@@ -6,9 +6,10 @@
  *      reported as missing, not filled with a placeholder that would later
  *      look configured and fail at the first real call.
  *   2. It only generates the secrets that are genuinely ours to generate —
- *      the operator token and the webhook shared secret — and only when they
- *      do not already exist, so re-running never rotates a live secret out
- *      from under a running deployment.
+ *      the session signing key and the webhook shared secret — and only when
+ *      they do not already exist, so re-running never rotates a live secret
+ *      out from under a running deployment. The operator password is NOT
+ *      generated: a human types that one, so it stays theirs to choose.
  *
  * Key names come from the same catalog the Connections board uses, so a
  * connector added there is covered here without a second list to maintain.
@@ -31,9 +32,17 @@ export type RequiredKey = {
 /** Keys the platform itself needs, beyond anything a connector asks for. */
 const PLATFORM_KEYS: RequiredKey[] = [
   {
-    name: 'FOUNDER_OS_TOKEN',
+    name: 'AUTH_PASSWORD',
     origin: 'platform',
-    description: 'Operator token gating every write endpoint',
+    // Deliberately not generated: the operator types this one, so it is theirs
+    // to choose. A missing password is reported, never invented.
+    description: 'Single operator password gating the whole app',
+    requiredForProduction: true,
+  },
+  {
+    name: 'AUTH_SECRET',
+    origin: 'platform',
+    description: 'Random key signing the session cookie',
     generated: true,
     requiredForProduction: true,
   },

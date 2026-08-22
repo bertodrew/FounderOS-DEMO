@@ -32,14 +32,17 @@ describe('GET /api/health', () => {
 
   test('never leaks a credential value', async () => {
     process.env.STRIPE_SECRET_KEY = 'sk_live_should_never_appear';
-    process.env.FOUNDER_OS_TOKEN = 'op_should_never_appear';
+    process.env.AUTH_PASSWORD = 'pw_should_never_appear';
+    process.env.AUTH_SECRET = 'secret_should_never_appear';
     const { body } = await health();
     const serialized = JSON.stringify(body);
     expect(serialized).not.toContain('sk_live_should_never_appear');
-    expect(serialized).not.toContain('op_should_never_appear');
-    // It reports THAT writes are gated, never the token itself.
-    expect(body.checks.writes.gated).toBe(true);
+    expect(serialized).not.toContain('pw_should_never_appear');
+    expect(serialized).not.toContain('secret_should_never_appear');
+    // It reports THAT the app is gated, never the credentials themselves.
+    expect(body.checks.auth.gated).toBe(true);
     delete process.env.STRIPE_SECRET_KEY;
-    delete process.env.FOUNDER_OS_TOKEN;
+    delete process.env.AUTH_PASSWORD;
+    delete process.env.AUTH_SECRET;
   });
 });

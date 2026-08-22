@@ -1,7 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { Bot, Search } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Bot, LogOut, Search } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CONDUCTOR_OPEN_EVENT } from '@/components/ConductorPanel';
 
@@ -24,8 +24,15 @@ export function openPalette() {
 
 export function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const segment = pathname.split('/')[1] ?? '';
   const here = SEGMENT_LABELS[segment] ?? segment;
+
+  const signOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <div className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center gap-3.5 border-b border-os-border bg-os-bg2/70 px-6 backdrop-blur">
@@ -52,6 +59,14 @@ export function Topbar() {
           className="grid h-[30px] w-[30px] place-items-center rounded-sm-t border border-os-border bg-os-surface text-os-muted transition-colors hover:border-os-border-strong hover:text-os-accent"
         >
           <Bot className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => void signOut()}
+          title="Sign out"
+          aria-label="Sign out"
+          className="grid h-[30px] w-[30px] place-items-center rounded-sm-t border border-os-border bg-os-surface text-os-muted transition-colors hover:border-os-border-strong hover:text-os-err"
+        >
+          <LogOut className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

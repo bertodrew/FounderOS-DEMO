@@ -1,18 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import { LIFE_AREAS } from '@/lib/life-map';
-import {
-  VENTURES,
-  ventureAgentSet,
-  venturesForAgent,
-  getVenture,
-} from '@/lib/ventures';
+import { ventureAgentSet, venturesForAgent, getVenture } from '@/lib/ventures';
+import { defaultProfiles as VENTURES } from '@/lib/seed';
 
 import { realAgents } from '@/lib/agents/real';
 
 const KNOWN_AGENTS = new Set(realAgents.map((a) => a.id));
 
-describe('VENTURES', () => {
-  test("Alex's two active income sources, each with a distinct color and brain tag", () => {
+describe('default profiles (seeded examples)', () => {
+  test('two seeded examples, each with a distinct color and brain tag', () => {
     expect(VENTURES.map((v) => v.id)).toEqual(['vantage', 'launchpad-cohort']);
     expect(new Set(VENTURES.map((v) => v.color)).size).toBe(2);
     expect(new Set(VENTURES.map((v) => v.brainTag)).size).toBe(2);
@@ -30,9 +26,9 @@ describe('VENTURES', () => {
     expect(byId.get('launchpad-cohort')?.color).toBe('#d9263f');
   });
 
-  test('Personal Brand (brand-deals) is retired from the venture lens', () => {
-    expect(getVenture('brand-deals')).toBeNull();
-    expect(VENTURES.some((v) => v.label === 'Personal Brand')).toBe(false);
+  test('Personal Brand (brand-deals) is not among the seeded examples', () => {
+    expect(getVenture(VENTURES, 'brand-deals')).toBeNull();
+    expect(VENTURES.some((v) => v.name === 'Personal Brand')).toBe(false);
   });
 
   test('venture colors do not collide with life-area colors', () => {
@@ -66,25 +62,25 @@ describe('VENTURES', () => {
 
 describe('lookups', () => {
   test('getVenture resolves by id and returns null for unknowns', () => {
-    expect(getVenture('vantage')?.label).toBe('Vantage');
-    expect(getVenture('nope')).toBeNull();
+    expect(getVenture(VENTURES, 'vantage')?.name).toBe('Vantage');
+    expect(getVenture(VENTURES, 'nope')).toBeNull();
   });
 
   test('ventureAgentSet unions all areas for a venture', () => {
-    const set = ventureAgentSet('vantage');
-    const vantage = getVenture('vantage')!;
+    const set = ventureAgentSet(VENTURES, 'vantage');
+    const vantage = getVenture(VENTURES, 'vantage')!;
     for (const agents of Object.values(vantage.areaAgents)) {
       for (const id of agents) expect(set.has(id)).toBe(true);
     }
   });
 
   test('venturesForAgent reverse lookup: shared infra agents serve both ventures', () => {
-    expect(venturesForAgent('conductor').map((v) => v.id)).toEqual([
+    expect(venturesForAgent(VENTURES, 'conductor').map((v) => v.id)).toEqual([
       'vantage', 'launchpad-cohort',
     ]);
   });
 
   test('whatsapp-worker serves launchpad-cohort (students live on WhatsApp)', () => {
-    expect(venturesForAgent('whatsapp-worker').some((v) => v.id === 'launchpad-cohort')).toBe(true);
+    expect(venturesForAgent(VENTURES, 'whatsapp-worker').some((v) => v.id === 'launchpad-cohort')).toBe(true);
   });
 });

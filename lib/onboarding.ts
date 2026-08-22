@@ -45,7 +45,8 @@ export type ConnectorSummary = {
 export type OnboardingInput = {
   production: boolean;
   storage: { durable: boolean; reason: string };
-  writesGated: boolean;
+  /** AUTH_PASSWORD + AUTH_SECRET are both set, so the app is behind the gate. */
+  passwordGated: boolean;
   llm: { configured: boolean; detail: string };
   connectors: ConnectorSummary[];
   /** Recent runs observed (the caller may cap its lookback). */
@@ -83,16 +84,16 @@ export function buildOnboarding(input: OnboardingInput): OnboardingState {
 
   steps.push({
     id: 'access',
-    title: 'Arm the write gate',
+    title: 'Lock the front door',
     detail:
-      'Reads are public by design. Writes spend LLM budget, save credentials and mutate the store, so they need an operator token before this is reachable from the internet.',
-    action: 'Set FOUNDER_OS_TOKEN (openssl rand -hex 32) in the deployment environment.',
-    evidence: input.writesGated
-      ? 'FOUNDER_OS_TOKEN is set: writes require it'
+      'This is your business data: comms, clients, revenue. Without the password gate anyone with the URL reads all of it. Local dev stays open so the workflow needs no setup, but a deployment must not.',
+    action: 'Set AUTH_PASSWORD and AUTH_SECRET (openssl rand -hex 32) in the deployment environment.',
+    evidence: input.passwordGated
+      ? 'AUTH_PASSWORD and AUTH_SECRET are set: the app requires a login'
       : input.production
-        ? 'FOUNDER_OS_TOKEN is unset: every write endpoint is answering 503'
-        : 'FOUNDER_OS_TOKEN is unset: writes are open, which is fine locally',
-    status: input.writesGated ? 'done' : pending(input.production),
+        ? 'AUTH_PASSWORD/AUTH_SECRET unset: the deployment is failing closed with 503'
+        : 'AUTH_PASSWORD/AUTH_SECRET unset: open locally, which is fine in dev',
+    status: input.passwordGated ? 'done' : pending(input.production),
     required: true,
   });
 

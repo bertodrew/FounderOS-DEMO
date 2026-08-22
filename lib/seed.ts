@@ -1,5 +1,6 @@
 import type { FounderDb } from '@/lib/db';
 import { PERSONAS } from '@/lib/personas-seed';
+import { FOUNDER_NAME } from '@/lib/identity';
 import type {
   Agent,
   AgentTask,
@@ -14,6 +15,7 @@ import type {
   RoadmapItem,
   SopTask,
   Workflow,
+  Profile,
   Skill,
   SocialAccount,
   SocialDm,
@@ -128,9 +130,9 @@ const agents: Agent[] = [
     role: 'Social Media & Content Creation Instance',
     status: 'active',
     tier: 'lead',
-    description: 'Owns publishing and content production. Aggregates the Zernio and Arcads workers.',
+    description: 'Owns publishing and content production. Aggregates the Zernio, Arcads, and Riona workers.',
     model: 'aggregate of workers',
-    tools: ['zernio', 'arcads', 'remotion', 'higgsfield', 'manychat'],
+    tools: ['zernio', 'arcads', 'riona', 'remotion', 'higgsfield', 'manychat'],
     parentId: null,
     instance: 'builtin',
   },
@@ -157,6 +159,19 @@ const agents: Agent[] = [
     description: 'Generates UGC ads for Vantage (Veo/Sora/Kling) via the Arcads API. Auth on this machine — works today.',
     model: 'arcads api',
     tools: ['arcads'],
+    parentId: 'social-agent',
+    instance: 'builtin',
+  },
+  {
+    id: 'riona-instagram',
+    departmentId: 'dept-marketing-growth',
+    name: 'Riona Instagram',
+    role: 'Instagram Automation',
+    status: 'active',
+    tier: 'worker',
+    description: 'Likes, comments, and DMs on Instagram via the companion riona-ai-agent service (Railway, not Vercel).',
+    model: 'riona-ai-agent api',
+    tools: ['riona'],
     parentId: 'social-agent',
     instance: 'builtin',
   },
@@ -565,7 +580,7 @@ const sopTasks: SopTask[] = [
       'Connect the four configured IMAP inboxes on the sync cadence',
       'Pull unread counts and every thread newer than the last sweep',
       'Classify each thread: urgent, reply-needed, waiting-on-us, FYI',
-      'Draft suggested replies for reply-needed threads in Alex voice',
+      `Draft suggested replies for reply-needed threads in ${FOUNDER_NAME} voice`,
       'Hand urgent threads to the escalation queue with a one-line summary',
       'Surface anything from a client domain to the Clients pillar too',
     ],
@@ -600,8 +615,8 @@ const sopTasks: SopTask[] = [
     summary: 'The human hands on the threads that need judgment.',
     steps: [
       'Review the escalation queue the workers built overnight',
-      'Draft replies in Alex’s voice for VIP threads',
-      'Send what is cleared, file the rest for Alex’s approval',
+      `Draft replies in ${FOUNDER_NAME}’s voice for VIP threads`,
+      `Send what is cleared, file the rest for ${FOUNDER_NAME}’s approval`,
       'Chase any thread waiting on us for more than 24 hours',
       'Close the loop in /comms so nothing dangles',
     ],
@@ -643,6 +658,18 @@ const sopTasks: SopTask[] = [
       'Cull the takes that break the brief before rendering finals',
       'Render finals and name them by angle',
       'Deliver the batch to creative review with a variant sheet',
+    ],
+  },
+  {
+    id: 'sop-riona-instagram', departmentId: 'dept-marketing-growth', assigneeKind: 'agent', assigneeId: 'riona-instagram',
+    title: 'Run the Instagram interaction pass',
+    summary: 'Likes, comments, and DMs through the Riona AI service.',
+    steps: [
+      'Confirm the companion riona-ai-agent service is reachable',
+      'Authenticate the configured Instagram account',
+      'Run an interaction pass against the target feed',
+      'Send any queued DMs for warmed-up leads',
+      'Log the result and flag any failed logins to the Social Agent',
     ],
   },
   {
@@ -851,7 +878,7 @@ const sopTasks: SopTask[] = [
       'Categorize transactions using the statement’s own categories',
       'Reconcile against the income the agents recorded and chase every gap',
       'Confirm refunds and disputes are reflected in the venture totals',
-      'Deliver the month-end P&L to Alex with three lines of commentary',
+      `Deliver the month-end P&L to ${FOUNDER_NAME} with three lines of commentary`,
     ],
   },
 
@@ -970,7 +997,7 @@ const roadmap: RoadmapItem[] = [
   { id: 'rm-scheduler', title: 'Agent scheduler (cron runs)', quarter: '2026-Q3', status: 'next', departmentId: 'dept-tech', description: 'Recurring agent runs with run history and failure alerts.' },
   { id: 'rm-llm', title: 'LLM summarization layer', quarter: '2026-Q3', status: 'next', departmentId: 'dept-tech', description: 'Claude API digests over inbox/Slack/payments data.' },
   { id: 'rm-host', title: 'Migrate to a dedicated host', quarter: '2026-Q3', status: 'next', departmentId: 'dept-tech', description: 'Host app + gbrain + agents on the host; Supabase stays managed.' },
-  { id: 'rm-ui', title: 'UI design pass', quarter: '2026-Q4', status: 'later', departmentId: 'dept-tech', description: 'Alex-led redesign once all integrations are live.' },
+  { id: 'rm-ui', title: 'UI design pass', quarter: '2026-Q4', status: 'later', departmentId: 'dept-tech', description: `${FOUNDER_NAME}-led redesign once all integrations are live.` },
   { id: 'rm-auth', title: 'Auth + remote access', quarter: '2026-Q4', status: 'later', departmentId: 'dept-tech', description: 'Reach FOUNDER OS on the host from anywhere, safely.' },
 ];
 
@@ -1006,7 +1033,7 @@ const socialAccounts: SocialAccount[] = [
   { platform: 'tiktok', handle: '@founderos.ai', url: 'https://tiktok.com/@founderos.ai', order: 2 },
   { platform: 'twitter', handle: '@Founderosai', url: 'https://x.com/Founderosai', order: 3 },
   { platform: 'youtube', handle: '@founderosai', url: 'https://youtube.com/@founderosai', order: 4 },
-  { platform: 'linkedin', handle: 'Alex Rivera', url: null, order: 5 },
+  { platform: 'linkedin', handle: FOUNDER_NAME, url: null, order: 5 },
 ];
 
 // Demo follower counts. LinkedIn has no baseline in this demo, so it gets
@@ -1411,7 +1438,7 @@ const workflows: Workflow[] = [
         id: 'wf-mer-3',
         title: 'Book demos',
         ownerKind: 'human',
-        owner: 'Alex · Founder',
+        owner: `${FOUNDER_NAME} · Founder`,
         hoursPerWeek: 4,
         tools: ['calendar', 'attio'],
         edgeLabel: 'demo',
@@ -1422,7 +1449,7 @@ const workflows: Workflow[] = [
         id: 'wf-mer-4',
         title: 'Sales call',
         ownerKind: 'human',
-        owner: 'Alex · Founder',
+        owner: `${FOUNDER_NAME} · Founder`,
         hoursPerWeek: 10,
         tools: ['webinarjam', 'attio'],
         edgeLabel: 'proposal',
@@ -1433,7 +1460,7 @@ const workflows: Workflow[] = [
         id: 'wf-mer-5',
         title: 'Proposal & follow-up',
         ownerKind: 'human',
-        owner: 'Alex · Founder',
+        owner: `${FOUNDER_NAME} · Founder`,
         hoursPerWeek: 5,
         tools: ['proposal-gen', 'gmail'],
         edgeLabel: 'won',
@@ -1486,7 +1513,7 @@ const workflows: Workflow[] = [
         id: 'wf-lc-3',
         title: 'Strategy call',
         ownerKind: 'human',
-        owner: 'Alex · Founder',
+        owner: `${FOUNDER_NAME} · Founder`,
         hoursPerWeek: 8,
         tools: ['ghl', 'calendar'],
         edgeLabel: 'closed',
@@ -1581,7 +1608,73 @@ const skills: Omit<Skill, 'markdown'>[] = [
   { id: 'skill-attribution', name: 'Revenue attribution', category: 'Ops', description: 'Ties content and calls to closed revenue via Trakyo.', ownerAgentId: null, status: 'planned', tools: ['trakyo', 'ghl'], order: 11 },
 ];
 
+// Two example profiles so a fresh clone doesn't look empty. Fully
+// user-editable from /org — rename, recolor, or delete them and create your
+// own per real company (they're stored in `profiles`, not hardcoded).
+const PROFILE_SHARED_OPS = ['conductor', 'stack-monitor'];
+const PROFILE_SHARED_KNOWLEDGE = ['data-agent', 'markdown-auditor', 'vector-auditor'];
+export const defaultProfiles: Profile[] = [
+  {
+    id: 'vantage',
+    name: 'Vantage',
+    kind: 'AI agency',
+    color: '#00ffaa',
+    detail: 'Client AI builds and delivery — the agency arm.',
+    brainTag: 'vantage',
+    focus: [
+      'Active client builds shipped on schedule',
+      'Pipeline: proposals out, deals advanced in Attio',
+      'Delivery quality — every handoff documented in G-Brain',
+    ],
+    areaAgents: {
+      marketing: ['social-agent', 'zernio-publisher', 'remotion-editor', 'higgsfield-creative'],
+      sales: ['vantage-sales', 'vantage-fanbasis', 'sales-agent', 'sales-calls-data'],
+      communication: ['comms-agent', 'gmail-worker', 'slack-worker', 'crm-pulse'],
+      finances: ['payments-pulse', 'stripe-sales', 'processor-confirmation'],
+      knowledge: [...PROFILE_SHARED_KNOWLEDGE, 'notion-sync'],
+      operations: PROFILE_SHARED_OPS,
+    },
+    order: 1,
+  },
+  {
+    id: 'launchpad-cohort',
+    name: 'Launchpad Cohort',
+    kind: 'Mentorship program',
+    color: '#d9263f',
+    detail: 'The mentorship — students, curriculum, community.',
+    brainTag: 'launchpad-cohort',
+    focus: [
+      'Student results — track wins, unblock stuck students fast',
+      'Content + newsletter cadence for enrollment',
+      'Community pulse on WhatsApp; T1 response times hold',
+    ],
+    areaAgents: {
+      marketing: ['social-agent', 'arcads-creative', 'zernio-publisher', 'manychat-mcp', 'remotion-editor'],
+      sales: ['launchpad-cohort-sales', 'fanbasis-sales', 'sales-agent', 'sales-calls-data'],
+      communication: ['whatsapp-worker', 'gmail-worker', 'comms-agent', 'crm-pulse'],
+      finances: ['payments-pulse', 'stripe-sales', 'pava-financing', 'processor-confirmation'],
+      knowledge: PROFILE_SHARED_KNOWLEDGE,
+      operations: PROFILE_SHARED_OPS,
+    },
+    order: 2,
+  },
+];
+
+/**
+ * SEED_DEMO_DATA=false drops every fictional-business row (people, example
+ * profiles, demo tasks, social/email/funnel history) while keeping the
+ * structural/product model (departments, the 25 template agents, their
+ * SOPs, skills, tools, roadmap) — the difference between a populated demo
+ * and a clean start for your own data. Defaults to on so local dev, the
+ * seed script, and the existing test suite are unaffected.
+ */
+function seedDemoDataEnabled(): boolean {
+  return process.env.SEED_DEMO_DATA !== 'false';
+}
+
 export function seedDatabase(db: FounderDb): void {
+  const seedDemo = seedDemoDataEnabled();
+
   // INSERT OR REPLACE in every repo makes re-seeding idempotent by id.
   for (const d of departments) db.departments.insert(d);
   for (const a of agents) db.agents.insert(a);
@@ -1589,31 +1682,54 @@ export function seedDatabase(db: FounderDb): void {
   // and departments that left the operating model go with them.
   db.agents.deleteWhereIdNotIn(agents.map((a) => a.id));
   db.departments.deleteWhereIdNotIn(departments.map((d) => d.id));
-  for (const p of people) db.people.insert(p);
-  db.people.deleteWhereIdNotIn(people.map((p) => p.id));
-  for (const t of sopTasks) db.sopTasks.insert(t);
-  db.sopTasks.deleteWhereIdNotIn(sopTasks.map((t) => t.id));
+
+  if (seedDemo) {
+    for (const p of people) db.people.insert(p);
+    db.people.deleteWhereIdNotIn(people.map((p) => p.id));
+  } else {
+    db.people.deleteWhereIdNotIn([]);
+  }
+
+  // sopTasks are structural (every agent's operating procedure) except the
+  // one person-assigned entry, which follows `people`.
+  const sopTasksToSeed = seedDemo ? sopTasks : sopTasks.filter((t) => t.assigneeKind !== 'person');
+  for (const t of sopTasksToSeed) db.sopTasks.insert(t);
+  db.sopTasks.deleteWhereIdNotIn(sopTasksToSeed.map((t) => t.id));
+
   for (const w of workflows) db.workflows.insert(w);
   db.workflows.deleteWhereIdNotIn(workflows.map((w) => w.id));
+  // Not pruned: profiles are user-owned from here on — a re-seed restores
+  // the two examples if missing (and demo data is on) but never deletes a
+  // profile you created, and never recreates them once you've turned demo
+  // data off.
+  if (seedDemo) {
+    for (const p of defaultProfiles) db.profiles.insert(p);
+  }
   for (const s of skills) db.skills.insert({ ...s, markdown: skillDoc(s) });
   db.skills.deleteWhereIdNotIn(skills.map((s) => s.id));
-  for (const t of agentTasks) db.agentTasks.insert(t); // insert-by-id; user tasks coexist
+  if (seedDemo) {
+    for (const t of agentTasks) db.agentTasks.insert(t); // insert-by-id; user tasks coexist
+  }
   for (const t of tools) db.tools.insert(t);
   for (const r of roadmap) db.roadmap.insert(r);
   for (const m of metrics) db.metrics.insert(m);
   for (const d of domains) db.domains.insert(d);
   for (const p of PERSONAS) db.personas.insert(p);
   for (const p of phases) db.phases.insert(p);
-  for (const a of socialAccounts) db.social.upsertAccount(a);
-  for (const s of socialBaseline) db.social.insertSnapshot(s);
-  for (const d of socialDms) db.social.upsertDm(d);
-  for (const s of socialDmSnapshots) db.social.insertDmSnapshot(s);
-  for (const m of socialDmMessages) db.social.upsertDmMessage(m);
+  if (seedDemo) {
+    for (const a of socialAccounts) db.social.upsertAccount(a);
+    for (const s of socialBaseline) db.social.insertSnapshot(s);
+    for (const d of socialDms) db.social.upsertDm(d);
+    for (const s of socialDmSnapshots) db.social.insertDmSnapshot(s);
+    for (const m of socialDmMessages) db.social.upsertDmMessage(m);
+  }
   // Retired dummy email history leaves the DB on re-seed; the real Beehiiv
   // baseline is authoritative. Live-synced snapshots survive.
   db.emailList.deleteSeeded();
-  for (const s of emailListBaseline) db.emailList.insertSnapshot(s);
-  for (const p of socialPosts) db.socialPosts.enqueue(p);
-  for (const c of funnelContacts) db.funnel.insertContact(c);
-  for (const t of funnelTouches) db.funnel.insertTouch(t);
+  if (seedDemo) {
+    for (const s of emailListBaseline) db.emailList.insertSnapshot(s);
+    for (const p of socialPosts) db.socialPosts.enqueue(p);
+    for (const c of funnelContacts) db.funnel.insertContact(c);
+    for (const t of funnelTouches) db.funnel.insertTouch(t);
+  }
 }

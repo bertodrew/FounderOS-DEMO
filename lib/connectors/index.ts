@@ -18,6 +18,9 @@ import { webinarjamStatus } from '@/lib/connectors/webinarjam';
 import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
+import { githubStatus } from '@/lib/connectors/github';
+import { odooStatus } from '@/lib/connectors/odoo';
+import { rionaStatus } from '@/lib/connectors/riona';
 import { getBrainProvider } from '@/lib/brain';
 import { resolveManychatKey, runtimeEnv } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
@@ -39,6 +42,7 @@ const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][
   ['llm', 'orchestration', llmStatus],
   ['whatsapp', 'social', whatsappStatus],
   ['zernio', 'social', zernioStatus],
+  ['riona', 'social', () => rionaStatus(runtimeEnv())],
   ['beehiiv', 'social', () => beehiivStatus(runtimeEnv())],
   [
     'manychat',
@@ -56,6 +60,8 @@ const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][
   ['trakyo', 'crm', trakyoStatus],
   ['meta-ads', 'ads', metaAdsStatus],
   ['ghl', 'crm', ghlStatus],
+  ['odoo', 'crm', () => odooStatus(runtimeEnv())],
+  ['github', 'developer', () => githubStatus(runtimeEnv())],
   ['arcads', 'creative', arcadsStatus],
   ['wispr', 'local', wisprStatus],
   ['local-stack', 'local', localStackStatus],

@@ -5,7 +5,7 @@ describe('requiredKeyNames', () => {
   test('covers the platform keys and every connector key the catalog declares', () => {
     const names = requiredKeyNames();
     expect(names).toEqual(expect.arrayContaining([
-      'FOUNDER_OS_TOKEN', 'FOUNDER_OS_DB', 'AI_GATEWAY_API_KEY',
+      'AUTH_PASSWORD', 'AUTH_SECRET', 'FOUNDER_OS_DB', 'AI_GATEWAY_API_KEY',
       'SLACK_BOT_TOKEN', 'STRIPE_SECRET_KEY', 'NOTION_API_KEY',
       'MANYCHAT_API_KEY', 'MANYCHAT_WEBHOOK_SECRET',
     ]));
@@ -38,7 +38,9 @@ describe('buildSecretPlan', () => {
   test('generates the secrets it is allowed to invent, and only those', () => {
     const plan = buildSecretPlan({ available: {}, sourceLabel: '.env.local', generate });
     const generated = plan.entries.filter((e) => e.source === 'generated').map((e) => e.name);
-    expect(generated.sort()).toEqual(['FOUNDER_OS_TOKEN', 'MANYCHAT_WEBHOOK_SECRET']);
+    expect(generated.sort()).toEqual(['AUTH_SECRET', 'MANYCHAT_WEBHOOK_SECRET']);
+    // The operator password is a human choice, so it is reported, never invented.
+    expect(plan.missing).toContain('AUTH_PASSWORD');
     // A third-party credential is never invented — it is reported missing.
     expect(plan.entries.find((e) => e.name === 'STRIPE_SECRET_KEY')).toBeUndefined();
     expect(plan.missing).toContain('STRIPE_SECRET_KEY');
@@ -46,11 +48,11 @@ describe('buildSecretPlan', () => {
 
   test('never overwrites a generated-type secret that already exists', () => {
     const plan = buildSecretPlan({
-      available: { FOUNDER_OS_TOKEN: 'already-set' },
+      available: { AUTH_SECRET: 'already-set' },
       sourceLabel: 'process.env',
       generate,
     });
-    const token = plan.entries.find((e) => e.name === 'FOUNDER_OS_TOKEN')!;
+    const token = plan.entries.find((e) => e.name === 'AUTH_SECRET')!;
     expect(token.value).toBe('already-set');
     expect(token.source).toBe('process.env');
   });

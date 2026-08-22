@@ -1,93 +1,68 @@
 /**
- * Operator access gate.
- *
- * The demo is meant to stay browsable with zero setup, so READS are always
- * open. WRITES are the dangerous surface: they spend LLM credits, write
- * credentials to disk, and mutate the store. The rule is fail-closed in
- * production:
- *
- *   - FOUNDER_OS_TOKEN set   -> every write must present that token.
- *   - unset, not production  -> writes stay open (local dev, `npm run dev`).
- *   - unset, production      -> writes are DISABLED (503), never open.
- *
- * Webhooks carry their own shared secret and are gated in their own handler.
- * This module is imported by `middleware.ts`, so it must stay edge-safe:
- * no node builtins, no filesystem, no `process` beyond what is passed in.
+ * Single-operator session auth — a signed, expiring cookie, no user table.
+ * Uses Web Crypto (crypto.subtle) so the same code runs in both the Edge
+ * middleware and the Node.js API routes without a runtime-specific fork.
  */
+export const SESSION_COOKIE = 'founderos_session';
+const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-export type AuthEnv = Record<string, string | undefined>;
-
-export type Decision = { ok: true } | { ok: false; status: number; error: string };
-
-const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-
-/** Paths that answer unauthenticated regardless of method. */
-const OPEN_PREFIXES = [
-  '/api/webhooks/', // machine-to-machine, gated by its own shared secret
-  '/api/health', // platform liveness probes must not need a credential
-];
-
-export function isMutating(method: string): boolean {
-  return !SAFE_METHODS.has(method.toUpperCase());
+async function hmacKey(secret: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify'],
+  );
 }
 
-export function isProduction(env: AuthEnv): boolean {
-  return env.NODE_ENV === 'production';
+function toB64Url(bytes: ArrayBuffer | Uint8Array): string {
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let binary = '';
+  for (const byte of arr) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function operatorToken(env: AuthEnv): string | undefined {
-  const raw = env.FOUNDER_OS_TOKEN?.trim();
-  return raw ? raw : undefined;
+function fromB64Url(s: string): Uint8Array {
+  const padded = s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4);
+  const binary = atob(padded);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
 }
 
-/** Constant-time string compare. An empty string is never a valid secret. */
+export async function createSessionToken(secret: string): Promise<string> {
+  const payload = toB64Url(new TextEncoder().encode(JSON.stringify({ exp: Date.now() + SESSION_MS })));
+  const key = await hmacKey(secret);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return `${payload}.${toB64Url(sig)}`;
+}
+
+export async function verifySessionToken(token: string | undefined | null, secret: string): Promise<boolean> {
+  if (!token) return false;
+  const [payload, sig] = token.split('.');
+  if (!payload || !sig) return false;
+  try {
+    const key = await hmacKey(secret);
+    const valid = await crypto.subtle.verify('HMAC', key, fromB64Url(sig) as BufferSource, new TextEncoder().encode(payload));
+    if (!valid) return false;
+    const { exp } = JSON.parse(new TextDecoder().decode(fromB64Url(payload))) as { exp?: number };
+    return typeof exp === 'number' && exp > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Constant-time string compare for shared secrets that are checked outside the
+ * session gate. `/api/webhooks/*` is exempt from the middleware (third parties
+ * cannot hold a session cookie), so its per-integration secret is the only
+ * thing guarding a write endpoint and deserves a compare that does not leak
+ * the answer through timing. Kept here, edge-safe, so both runtimes can use it.
+ */
 export function timingSafeEquals(a: string, b: string): boolean {
   if (!a || !b || a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
-}
-
-/** `Authorization: Bearer …`, `x-founder-os-token`, or the session cookie. */
-export function presentedToken(headers: Headers): string | undefined {
-  const auth = headers.get('authorization');
-  if (auth) {
-    const match = /^bearer\s+(.+)$/i.exec(auth.trim());
-    if (match) return match[1].trim();
-  }
-  const header = headers.get('x-founder-os-token')?.trim();
-  if (header) return header;
-  const cookie = headers.get('cookie');
-  if (cookie) {
-    for (const part of cookie.split(';')) {
-      const [name, ...rest] = part.split('=');
-      if (name?.trim() === 'founder_os_token') {
-        const value = rest.join('=').trim();
-        if (value) return value;
-      }
-    }
-  }
-  return undefined;
-}
-
-export type AccessRequest = { method: string; pathname: string; headers: Headers };
-
-export function checkAccess(req: AccessRequest, env: AuthEnv): Decision {
-  if (OPEN_PREFIXES.some((p) => req.pathname.startsWith(p))) return { ok: true };
-  if (!isMutating(req.method)) return { ok: true };
-
-  const expected = operatorToken(env);
-  if (!expected) {
-    if (!isProduction(env)) return { ok: true };
-    return {
-      ok: false,
-      status: 503,
-      error:
-        'Writes are disabled: set FOUNDER_OS_TOKEN in the deployment environment to enable them.',
-    };
-  }
-
-  const presented = presentedToken(req.headers);
-  if (presented && timingSafeEquals(presented, expected)) return { ok: true };
-  return { ok: false, status: 401, error: 'Operator token required for this request.' };
 }

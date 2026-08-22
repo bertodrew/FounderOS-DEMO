@@ -3,11 +3,13 @@ import { Users } from 'lucide-react';
 import { getDb } from '@/lib/data';
 import { buildHierarchy, flattenNodes, type AgentNode } from '@/lib/hierarchy';
 import { LIFE_AREAS, lifeAreaForDepartment } from '@/lib/life-map';
-import { VENTURES, getVenture, ventureAgentSet, venturesForAgent } from '@/lib/ventures';
+import { getVenture, ventureAgentSet, venturesForAgent, type Venture } from '@/lib/ventures';
 import { ConductorCard } from '@/components/ConductorCard';
+import { ProfileManager } from '@/components/ProfileManager';
 import { SparkIcon } from '@/components/SparkIcon';
 import { PageHeader } from '@/components/PageHeader';
 import type { Agent, AgentStatus } from '@/lib/schemas';
+import { FOUNDER_NAME } from '@/lib/identity';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,20 +21,20 @@ const STATUS_DOT: Record<AgentStatus, string> = {
 };
 
 /** Tiny colored dots showing which ventures an agent serves. */
-function VentureDots({ agentId }: { agentId: string }) {
-  const serving = venturesForAgent(agentId);
+function VentureDots({ agentId, ventures }: { agentId: string; ventures: Venture[] }) {
+  const serving = venturesForAgent(ventures, agentId);
   if (serving.length === 0) return null;
   return (
     <span className="flex shrink-0 items-center gap-0.5">
       {serving.map((v) => (
-        <span key={v.id} title={v.label} className="h-1 w-1 rounded-full" style={{ background: v.color }} />
+        <span key={v.id} title={v.name} className="h-1 w-1 rounded-full" style={{ background: v.color }} />
       ))}
     </span>
   );
 }
 
 /** Small black task pill, FounderOS-board style. */
-function AgentPill({ agent, dim = false }: { agent: Agent; dim?: boolean }) {
+function AgentPill({ agent, ventures, dim = false }: { agent: Agent; ventures: Venture[]; dim?: boolean }) {
   return (
     <div
       title={`${agent.role} — ${agent.description}`}
@@ -40,25 +42,27 @@ function AgentPill({ agent, dim = false }: { agent: Agent; dim?: boolean }) {
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[agent.status]}`} />
       <span className="truncate text-[10px] font-medium">{agent.name}</span>
-      <VentureDots agentId={agent.id} />
+      <VentureDots agentId={agent.id} ventures={ventures} />
     </div>
   );
 }
 
 function AgentNodePill({
   node,
+  ventures,
   depth = 0,
   dimFor,
 }: {
   node: AgentNode;
+  ventures: Venture[];
   depth?: number;
   dimFor?: (id: string) => boolean;
 }) {
   return (
     <div className="space-y-1.5" style={{ paddingLeft: depth ? `${depth * 10}px` : undefined }}>
-      <AgentPill agent={node.agent} dim={dimFor?.(node.agent.id) ?? false} />
+      <AgentPill agent={node.agent} ventures={ventures} dim={dimFor?.(node.agent.id) ?? false} />
       {node.children.map((child) => (
-        <AgentNodePill key={child.agent.id} node={child} depth={depth + 1} dimFor={dimFor} />
+        <AgentNodePill key={child.agent.id} node={child} ventures={ventures} depth={depth + 1} dimFor={dimFor} />
       ))}
     </div>
   );
@@ -86,10 +90,11 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
   const db = getDb();
   const departments = db.departments.all();
   const agents = db.agents.all();
+  const ventures = db.profiles.all();
   // The venture lens: same roster, same DB — the switcher just changes which
   // crew lights up. No venture param = everything bright.
-  const venture = getVenture(searchParams?.venture ?? '');
-  const ventureSet = venture ? ventureAgentSet(venture.id) : null;
+  const venture = getVenture(ventures, searchParams?.venture ?? '');
+  const ventureSet = venture ? ventureAgentSet(ventures, venture.id) : null;
   const dimFor = (id: string) => (ventureSet ? !ventureSet.has(id) : false);
   const conductor = agents.find((a) => a.id === 'conductor');
   // Conductor sits in the AI Head slot; the columns are everything else
@@ -117,7 +122,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
         >
           All ventures
         </Link>
-        {VENTURES.map((v) => {
+        {ventures.map((v) => {
           const active = venture?.id === v.id;
           return (
             <Link
@@ -129,11 +134,12 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
               style={active ? { background: v.color, borderColor: v.color } : undefined}
             >
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: active ? '#000000' : v.color }} />
-              {v.label}
+              {v.name}
             </Link>
           );
         })}
         {venture && <span className="text-[11px] text-os-dim">{venture.kind} · {venture.detail}</span>}
+        <ProfileManager ventures={ventures} activeId={venture?.id} />
       </div>
 
       {venture && (
@@ -142,7 +148,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
           style={{ borderColor: `${venture.color}66`, boxShadow: `inset 3px 0 0 ${venture.color}` }}
         >
           <div className="text-[9px] uppercase tracking-[0.2em]" style={{ color: venture.color }}>
-            {venture.label} — executive focus
+            {venture.name} — executive focus
           </div>
           <ul className="mt-1.5 space-y-1">
             {venture.focus.map((f) => (
@@ -172,7 +178,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
       {/* Operator */}
       <div className="flex flex-col items-center">
         <Users className="h-7 w-7 text-os-text" />
-        <div className="mt-1 text-base font-bold tracking-wide">Alex Rivera</div>
+        <div className="mt-1 text-base font-bold tracking-wide">{FOUNDER_NAME}</div>
         <div className="text-[10px] uppercase tracking-[0.3em] text-os-dim">Operator</div>
         <div className="mt-2 h-6 w-px bg-os-border-bright" />
         <div className="text-[10px] uppercase tracking-[0.2em] text-os-muted">Conductor (Super Agent)</div>
@@ -260,7 +266,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
                         <div className="flex min-w-0 items-center gap-1.5">
                           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[agent.status]}`} />
                           <span className="truncate text-xs font-bold">{agent.name}</span>
-                          <VentureDots agentId={agent.id} />
+                          <VentureDots agentId={agent.id} ventures={ventures} />
                         </div>
                         <span className="shrink-0 rounded bg-os-raised px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-wider text-os-dim">
                           {agent.instance}
@@ -275,7 +281,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
               {pillNodes.length > 0 && (
                 <div className="grid w-full grid-cols-2 gap-1.5">
                   {pillNodes.map((node) => (
-                    <AgentNodePill key={node.agent.id} node={node} dimFor={dimFor} />
+                    <AgentNodePill key={node.agent.id} node={node} ventures={ventures} dimFor={dimFor} />
                   ))}
                 </div>
               )}

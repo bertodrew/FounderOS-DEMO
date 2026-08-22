@@ -1,9 +1,21 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { POST, DELETE } from '@/app/api/connections/connect/route';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { readEnvLocal } from '@/lib/creds';
+
+// The connect route's Gmail branch calls the real ImapFlow to validate
+// credentials before saving — mocked so the test suite never dials out.
+let imapShouldSucceed = true;
+vi.mock('imapflow', () => ({
+  ImapFlow: vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockImplementation(() =>
+      imapShouldSucceed ? Promise.resolve() : Promise.reject(new Error('Invalid credentials (Failure)')),
+    ),
+    logout: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+const { POST, DELETE } = await import('@/app/api/connections/connect/route');
 
 /** The connect flow writes ONLY to .env.local (gitignored) — never to
  *  Alex's canonical machine files, never into the repo. */
@@ -19,6 +31,7 @@ describe('POST /api/connections/connect', () => {
     if (prevOverride === undefined) delete process.env.FOUNDER_OS_ENV_LOCAL;
     else process.env.FOUNDER_OS_ENV_LOCAL = prevOverride;
     try { fs.unlinkSync(tmp); } catch {}
+    imapShouldSucceed = true;
   });
 
   const post = (body: unknown) =>
@@ -49,6 +62,26 @@ describe('POST /api/connections/connect', () => {
     expect((await post({ slug: 'notion', values: {} })).status).toBe(400);
     // guidance-only tiles (whatsapp needs Full Disk Access, not a key) take no keys
     expect((await post({ slug: 'whatsapp', values: { WHATSAPP_API_KEY: 'x' } })).status).toBe(400);
+  });
+
+  test('Gmail: saves the IMAP fields once the credentials actually connect', async () => {
+    const res = await post({
+      slug: 'gmail',
+      values: { INBOX_1_HOST: 'imap.gmail.com', INBOX_1_USER: 'a@b.c', INBOX_1_PASS: 'good-pass', INBOX_1_NAME: 'Main' },
+    });
+    expect(res.status).toBe(200);
+    expect(readEnvLocal().INBOX_1_HOST).toBe('imap.gmail.com');
+  });
+
+  test('Gmail: rejects and saves nothing when the credentials fail to connect', async () => {
+    imapShouldSucceed = false;
+    const res = await post({
+      slug: 'gmail',
+      values: { INBOX_1_HOST: 'imap.gmail.com', INBOX_1_USER: 'a@b.c', INBOX_1_PASS: 'wrong-pass', INBOX_1_NAME: 'Main' },
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Invalid credentials/);
+    expect(readEnvLocal().INBOX_1_HOST).toBeUndefined();
   });
 
   test('DELETE removes exactly the integration keys (disconnect)', async () => {

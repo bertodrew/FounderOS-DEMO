@@ -93,10 +93,13 @@ The write surface is gated; reads stay open so the demo still works with no
 setup. Anything new that mutates state inherits this automatically — it goes
 through `middleware.ts`, so do not re-implement auth in a route.
 
-- `lib/auth.ts` — `checkAccess()`: reads always pass; writes require
-  `FOUNDER_OS_TOKEN`. **Fail-closed**: unset + `NODE_ENV=production` ⇒ writes
-  are disabled (503), never open. `/api/webhooks/*` and `/api/health` bypass it
-  (own secret / platform probe).
+- `lib/auth.ts` — signed, expiring session cookie (Web Crypto, so the same code
+  runs on the edge and in Node). The whole app is gated in production by
+  `AUTH_PASSWORD` + `AUTH_SECRET`; `next dev` stays open. **Fail-closed**: unset
+  in production ⇒ nothing is reachable (503), never open. `/login`,
+  `/api/auth/login`, `/api/webhooks/*` and `/api/health` bypass it (own secret /
+  platform probe). `timingSafeEquals` lives here for the webhook secrets, which
+  the gate does not cover.
 - `lib/rate-limit.ts` — per-IP fixed window, tighter class for LLM + upload
   routes. New expensive endpoint ⇒ add it to `RULES` in that file.
 - `middleware.ts` — the single choke point: security headers, gate, limiter.

@@ -199,7 +199,7 @@ export default async function BrainPage() {
         title="G-Brain"
         caret
         rightWide
-        right={<BrainDump compact />}
+        right={<BrainDump compact ventures={db.profiles.all()} />}
       />
 
       <section className="mt-5">

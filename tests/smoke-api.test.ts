@@ -38,6 +38,7 @@ const ROUTES: RouteEntry[] = [
   { route: 'life/map', load: () => import('@/app/api/life/map/route'), url: 'http://localhost/api/life/map' },
   { route: 'metrics', load: () => import('@/app/api/metrics/route'), url: 'http://localhost/api/metrics' },
   { route: 'onboarding', load: () => import('@/app/api/onboarding/route'), url: 'http://localhost/api/onboarding' },
+  { route: 'profiles', load: () => import('@/app/api/profiles/route'), url: 'http://localhost/api/profiles' },
   { route: 'roadmap', load: () => import('@/app/api/roadmap/route'), url: 'http://localhost/api/roadmap' },
   { route: 'social', load: () => import('@/app/api/social/route'), url: 'http://localhost/api/social' },
   { route: 'social/[platform]', load: () => import('@/app/api/social/[platform]/route'), url: 'http://localhost/api/social/instagram', params: { platform: 'instagram' } },

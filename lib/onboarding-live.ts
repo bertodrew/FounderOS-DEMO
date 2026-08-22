@@ -7,7 +7,6 @@ import { getDb } from '@/lib/data';
 import { allConnectorStatuses } from '@/lib/connectors';
 import { buildOnboarding } from '@/lib/onboarding';
 import { describeStorage } from '@/lib/storage';
-import { operatorToken } from '@/lib/auth';
 import { runtimeEnv } from '@/lib/creds';
 
 const RUN_LOOKBACK = 50;
@@ -19,7 +18,7 @@ export async function loadOnboarding() {
   const state = buildOnboarding({
     production: process.env.NODE_ENV === 'production',
     storage: describeStorage(process.env),
-    writesGated: Boolean(operatorToken(process.env)),
+    passwordGated: Boolean(process.env.AUTH_PASSWORD && process.env.AUTH_SECRET),
     llm: {
       configured: connectors.find((c) => c.id === 'llm')?.state === 'connected',
       detail: connectors.find((c) => c.id === 'llm')?.detail ?? 'LLM connector not reporting',

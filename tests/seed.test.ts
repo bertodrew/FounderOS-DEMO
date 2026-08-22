@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
 
@@ -219,6 +219,44 @@ describe('seedDatabase', () => {
       db.domains.all();
       db.phases.all();
     }).not.toThrow();
+  });
+});
+
+describe('seedDatabase — SEED_DEMO_DATA=false', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  test('drops fictional business data but keeps the structural product model', () => {
+    vi.stubEnv('SEED_DEMO_DATA', 'false');
+    db = openDb(':memory:');
+    seedDatabase(db);
+
+    // gone: fictional business content
+    expect(db.people.all()).toHaveLength(0);
+    expect(db.profiles.all()).toHaveLength(0);
+    expect(db.agentTasks.all()).toHaveLength(0);
+    expect(db.social.accounts()).toHaveLength(0);
+    expect(db.socialPosts.all()).toHaveLength(0);
+    expect(db.funnel.journeys()).toHaveLength(0);
+    expect(db.emailList.snapshots()).toHaveLength(0);
+    // the one person-assigned SOP task follows `people` out
+    expect(db.sopTasks.all().some((t) => t.assigneeKind === 'person')).toBe(false);
+
+    // kept: the structural / product model
+    expect(db.departments.all().length).toBeGreaterThanOrEqual(5);
+    expect(db.agents.all().length).toBeGreaterThanOrEqual(5);
+    expect(db.skills.all().length).toBeGreaterThanOrEqual(8);
+    expect(db.tools.all().length).toBeGreaterThanOrEqual(8);
+    expect(db.roadmap.all().length).toBeGreaterThanOrEqual(10);
+    // every agent still has exactly its one SOP task
+    const agentTaskIds = db.sopTasks.all().filter((t) => t.assigneeKind === 'agent').map((t) => t.assigneeId);
+    for (const agent of db.agents.all()) expect(agentTaskIds).toContain(agent.id);
+  });
+
+  test('defaults to demo data on when SEED_DEMO_DATA is unset', () => {
+    db = openDb(':memory:');
+    seedDatabase(db);
+    expect(db.people.all().length).toBeGreaterThan(0);
+    expect(db.profiles.all().length).toBeGreaterThan(0);
   });
 });
 

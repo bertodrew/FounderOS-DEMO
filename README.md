@@ -143,6 +143,12 @@ keeps the same repo-layer contract and swaps in real backends:
   wiring a real source (IMAP inboxes, Slack, Stripe, Notion, a CRM, calendar,
   social) is just supplying credentials. The UI immediately reflects real state
   instead of seeded data.
+- **CRM options under consideration.** Beyond the wired Attio/GoHighLevel/Odoo
+  connectors: [Comp AI CRM](https://github.com/trycompai/crm) — an
+  open-source, agentic-first CRM (Next.js/tRPC/NestJS, Postgres, self-hosted
+  on Vercel) built around an autonomous research agent rather than a
+  traditional CRM UI. Candidate for a self-hosted CRM path instead of a
+  third-party API.
 - **Agents run for real.** Each agent's `run()` executes against the live
   connectors and the knowledge layer, on a schedule, with runs persisted.
 
@@ -208,25 +214,30 @@ so they never touch the seeded dev DB.
 The demo is deliberately open: it has to be browsable with no setup. A public
 deployment is a different thing, and the app enforces the difference itself.
 
-### 1. Gate the write surface
+### 1. Lock the front door
 
-Reads stay open. **Writes** (agent runs, LLM chat, credential saves, uploads)
-require an operator token:
+A deployment holds your comms, clients and revenue, so the whole app sits
+behind a single-operator password. Local `next dev` stays open, so day-to-day
+development needs no setup:
 
 ```bash
-FOUNDER_OS_TOKEN=$(openssl rand -hex 32)
+AUTH_PASSWORD=your-password
+AUTH_SECRET=$(openssl rand -hex 32)   # signs the session cookie
 ```
 
-Callers present it as `Authorization: Bearer <token>`, an `x-founder-os-token`
-header, or a `founder_os_token` cookie. The gate **fails closed**: with
-`NODE_ENV=production` and no token set, every write endpoint answers `503`
-rather than staying open. Set `MANYCHAT_WEBHOOK_SECRET` too if you use the
-ManyChat webhook — in production it refuses to serve without one.
+The gate **fails closed**: in production with these unset, nothing is
+reachable (`503`) rather than silently open. Two paths are exempt, each for a
+reason: `/api/health`, so a platform probe can reach it (a gated health check
+fails every deploy), and `/api/webhooks/*`, since third parties cannot hold a
+session cookie. Those webhooks carry their own secret instead, so set
+`MANYCHAT_WEBHOOK_SECRET` if you use the ManyChat inbox: in production the
+webhook refuses to serve without it.
 
 Writes are also rate limited per IP, with a tighter budget for LLM calls and
-uploads. That limiter is **per process**: on a multi-instance deployment the
-effective limit multiplies by the instance count, so put a shared store or an
-edge WAF in front if you scale out.
+uploads, and the webhooks are metered too since the password gate does not
+cover them. That limiter is **per process**: on a multi-instance deployment
+the effective limit multiplies by the instance count, so put a shared store or
+an edge WAF in front if you scale out.
 
 ### 2. Give the store a real disk
 
@@ -249,11 +260,13 @@ visible on the first probe instead of at the first lost record.
 
 ```bash
 docker build -t founder-os .
-docker run -p 4100:4100 -v founder-os-data:/data   -e FOUNDER_OS_TOKEN=... founder-os
+docker run -p 4100:4100 -v founder-os-data:/data \
+  -e AUTH_PASSWORD=... -e AUTH_SECRET=... founder-os
 ```
 
 `railway.json` points Railway at the Dockerfile and health-checks
-`/api/health`. Add a volume mounted at `/data`, then set `FOUNDER_OS_TOKEN` and
+`/api/health`. Add a volume mounted at `/data`, then set `AUTH_PASSWORD`,
+`AUTH_SECRET`, and
 any connector credentials as environment variables in the dashboard.
 
 **Serverless (Vercel)** runs, but the filesystem is read-only apart from a
@@ -281,7 +294,7 @@ doppler run -- npm start         # run with the secrets injected
 `doppler:sync` derives the key list from the same connector catalog the
 Connections board uses, so a connector added there is covered without a second
 list to maintain. It generates the two secrets that are genuinely ours to
-generate (`FOUNDER_OS_TOKEN`, `MANYCHAT_WEBHOOK_SECRET`) and only when they are
+generate (`AUTH_SECRET`, `MANYCHAT_WEBHOOK_SECRET`) and only when they are
 not already set, so re-running never rotates a live secret. It never invents a
 third-party credential: a missing Stripe key is reported as missing rather than
 filled with a placeholder that would look configured and fail on the first real

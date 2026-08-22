@@ -30,6 +30,7 @@ import {
   WorkflowSchema,
   SkillSchema,
   ToolSchema,
+  ProfileSchema,
   type Agent,
   type AgentCron,
   type AgentMessage,
@@ -61,6 +62,7 @@ import {
   type Workflow,
   type Skill,
   type Tool,
+  type Profile,
 } from '@/lib/schemas';
 
 /**
@@ -320,6 +322,17 @@ CREATE TABLE IF NOT EXISTS skills (
   status TEXT NOT NULL DEFAULT 'planned',
   tools TEXT NOT NULL DEFAULT '[]',
   markdown TEXT NOT NULL DEFAULT '',
+  ord INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT '#3df08c',
+  detail TEXT NOT NULL DEFAULT '',
+  brain_tag TEXT NOT NULL,
+  focus TEXT NOT NULL DEFAULT '[]',
+  area_agents TEXT NOT NULL DEFAULT '{}',
   ord INTEGER NOT NULL DEFAULT 0
 );
 `;
@@ -1002,6 +1015,36 @@ export function openDb(path: string) {
     },
   };
 
+  const profiles = {
+    all(): Profile[] {
+      return db
+        .prepare('SELECT * FROM profiles ORDER BY ord, name')
+        .all()
+        .map((r: any) =>
+          ProfileSchema.parse({
+            id: r.id,
+            name: r.name,
+            kind: r.kind,
+            color: r.color,
+            detail: r.detail,
+            brainTag: r.brain_tag,
+            focus: JSON.parse(r.focus),
+            areaAgents: JSON.parse(r.area_agents),
+            order: r.ord,
+          }),
+        );
+    },
+    insert(p: Profile): void {
+      ProfileSchema.parse(p);
+      db.prepare(
+        'INSERT OR REPLACE INTO profiles (id, name, kind, color, detail, brain_tag, focus, area_agents, ord) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(p.id, p.name, p.kind, p.color, p.detail, p.brainTag, JSON.stringify(p.focus), JSON.stringify(p.areaAgents), p.order);
+    },
+    delete(id: string): void {
+      db.prepare('DELETE FROM profiles WHERE id = ?').run(id);
+    },
+  };
+
   const skills = {
     all(): Skill[] {
       return db
@@ -1112,6 +1155,7 @@ export function openDb(path: string) {
     sopTasks,
     workflows,
     skills,
+    profiles,
     close: () => db.close(),
   };
 }

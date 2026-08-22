@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/data';
 import { describeStorage } from '@/lib/storage';
-import { operatorToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // better-sqlite3 is native — keep off the edge runtime
@@ -12,7 +11,7 @@ export const runtime = 'nodejs'; // better-sqlite3 is native — keep off the ed
  * credential values, no paths outside the store, no stack traces.
  *
  * `status` is "degraded" rather than "ok" when the deployment is configured in a
- * way that silently loses user work or leaves writes ungated. That is
+ * way that silently loses user work or leaves the app ungated. That is
  * deliberate: a green health check on a data-losing deploy is worse than none.
  */
 export async function GET(): Promise<Response> {
@@ -29,12 +28,12 @@ export async function GET(): Promise<Response> {
   }
 
   const isProduction = process.env.NODE_ENV === 'production';
-  const writesGated = Boolean(operatorToken(process.env));
+  const authGated = Boolean(process.env.AUTH_PASSWORD && process.env.AUTH_SECRET);
 
   const warnings: string[] = [];
   if (!storage.durable) warnings.push(`storage is not durable: ${storage.reason}`);
-  if (isProduction && !writesGated) {
-    warnings.push('FOUNDER_OS_TOKEN is unset: all write endpoints are disabled');
+  if (isProduction && !authGated) {
+    warnings.push('AUTH_PASSWORD/AUTH_SECRET unset: the app is failing closed, nothing is reachable');
   }
 
   const status = !dbReachable ? 'error' : warnings.length > 0 ? 'degraded' : 'ok';
@@ -47,7 +46,7 @@ export async function GET(): Promise<Response> {
       checks: {
         database: { reachable: dbReachable, seeded },
         storage: { durable: storage.durable, ephemeral: storage.ephemeral, reason: storage.reason },
-        writes: { gated: writesGated, enabled: writesGated || !isProduction },
+        auth: { gated: authGated, enforced: isProduction },
       },
       warnings,
       latencyMs: Date.now() - startedAt,

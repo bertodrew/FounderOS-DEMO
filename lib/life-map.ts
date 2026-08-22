@@ -8,6 +8,7 @@
  * each life area owns a hue, and everything underneath inherits it.
  */
 import type { LifeMap, LifeMapNode } from '@/lib/schemas';
+import { FOUNDER_NAME } from '@/lib/identity';
 
 export type LifeModule = { id: string; label: string; detail: string };
 
@@ -177,7 +178,7 @@ export function buildLifeMap(): LifeMap {
     {
       id: 'center',
       type: 'center',
-      label: "Alex's Life",
+      label: `${FOUNDER_NAME}'s Life`,
       color: '#fafafa',
       parent: null,
       detail: 'The core. Everything orbits this.',

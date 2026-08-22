@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { ArrowUpRight, Zap } from 'lucide-react';
 import { getDb } from '@/lib/data';
 import { allConnectorStatuses } from '@/lib/connectors';
+import { readEnvLocal } from '@/lib/creds';
+import { connectionCatalog } from '@/lib/integrations-catalog';
+import { OnboardingBanner } from '@/components/OnboardingBanner';
 import { createGBrainProvider } from '@/lib/connectors/gbrain';
 import { audienceSeries, PLATFORM_COLORS, PLATFORM_LABELS } from '@/lib/social';
 import { syncFromZernioLive } from '@/lib/social-live';
@@ -11,6 +14,7 @@ import type { SocialPlatform } from '@/lib/schemas';
 import { gatherCommsFeed } from '@/lib/comms-feed';
 import { inboundLast24h } from '@/lib/comms';
 import { groupRoadmapByQuarter } from '@/lib/roadmap';
+import { FOUNDER_NAME } from '@/lib/identity';
 import { PageHeader } from '@/components/PageHeader';
 import { HomeSocialGraph } from '@/components/HomeSocialGraph';
 import { Badge, Dot, Kbd, Label, SectionHead, Spark } from '@/components/terminal';
@@ -143,6 +147,11 @@ export default async function HomePage() {
   for (const r of recentRuns) if (!lastRunByAgent.has(r.agentId)) lastRunByAgent.set(r.agentId, r);
 
   const connected = connections.filter((c) => c.state === 'connected').length;
+  // The onboarding wizard only covers real, paste-a-key connectors — not
+  // every internal status check (gbrain, wispr, local-stack) — so its
+  // "done" count is scoped to the same catalog it steps through.
+  const realConnectors = connectionCatalog(connections, readEnvLocal()).filter((c) => c.connectorId);
+  const realConnected = realConnectors.filter((c) => c.connected).length;
   const activeAgents = agents.filter((a) => a.status === 'active').length;
   const health = overview.doctor.healthScore;
   const inbound = inboundLast24h(feed);
@@ -192,7 +201,7 @@ export default async function HomePage() {
 
       <PageHeader
         eyebrow="operator console"
-        title={`${greeting()}, Alex`}
+        title={`${greeting()}, ${FOUNDER_NAME}`}
         caret
         right={<Kbd>⌘K</Kbd>}
       />
@@ -206,6 +215,8 @@ export default async function HomePage() {
           </span>
         ))}
       </div>
+
+      <OnboardingBanner connected={realConnected} total={realConnectors.length} />
 
       {/* Pulse row */}
       <section className="mb-[18px] grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">

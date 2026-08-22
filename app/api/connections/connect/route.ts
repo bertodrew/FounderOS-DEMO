@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { INTEGRATIONS, connectKeysFor } from '@/lib/integrations-catalog';
 import { readEnvLocal, upsertEnvLocal, removeEnvLocal } from '@/lib/creds';
+import { testImapConnection } from '@/lib/connectors/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,9 +53,22 @@ export async function POST(req: Request) {
     }
   }
 
+  if (entry.connectorId === 'email') {
+    const test = await testImapConnection({
+      host: body.values.INBOX_1_HOST,
+      user: body.values.INBOX_1_USER,
+      pass: body.values.INBOX_1_PASS,
+    });
+    if (!test.ok) {
+      return NextResponse.json({ ok: false, error: `Could not connect: ${test.error}` }, { status: 400 });
+    }
+  }
+
   try {
     upsertEnvLocal(Object.fromEntries(names.map((k) => [k, body.values[k].trim()])));
   } catch (err) {
+    // creds.ts falls back to /tmp on Vercel, but a host with a genuinely
+    // read-only or unwritable path should say so rather than 500 with a stack.
     const code = (err as NodeJS.ErrnoException)?.code;
     const readOnly = code === 'EROFS' || code === 'EACCES' || code === 'EPERM';
     return NextResponse.json(
